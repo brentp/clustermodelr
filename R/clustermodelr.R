@@ -87,8 +87,9 @@ stouffer_liptak = function(pvalues, sigma, lower.tail=TRUE){
 #' 
 #' @param covs covariate data.frame containing the terms in formula
 #'        except "methylation" which is added automatically
-#' @param methylation a matrix of correlated data.
+#' @param meth a matrix of correlated data.
 #' @param formula an R formula containing "methylation"
+#' @param cor.method either "spearman" or "pearson"
 #' @return \code{covariate, p, coef} where p and coef are for the coefficient
 #'         of the first term on the RHS of the model.
 #' @export
@@ -209,20 +210,20 @@ bumpingr = function(covs, meth, formula, n_sims=100){
 #'        except "methylation" which is added automatically
 #' @param methylation a matrix of correlated data.
 #' @param formula an R formula containing "methylation"
-#' @param cluster.idvar idvar sent to \code{geepack::geeglm}
+#' @param idvar idvar sent to \code{geepack::geeglm}
 #' @param corstr the corstr sent to \code{geepack::geeglm}
 #' @return \code{c(covariate, p, coef)} where p and coef are for the coefficient
 #'         of the first term on the RHS of the model.
 #' @export
-geer = function(covs, formula, cluster_col="CpG", corstr="ex"){
+geer = function(covs, formula, idvar="CpG", corstr="ex"){
     # assume it's already sorted by CpG, then by id.
-    if(cluster_col != "CpG" && corstr == "ar"){
-        covs = covs[order(covs[,cluster_col], covs$CpG),]
+    if(idvar != "CpG" && corstr == "ar"){
+        covs = covs[order(covs[,idvar], covs$CpG),]
     }
     suppressPackageStartupMessages(library('geepack', quietly=TRUE))
-    stopifnot(!is.null(cluster_col))
-    covs$clustervar = covs[,cluster_col]
-    # can't do logistc with cluster_col of id, gives bad results for some reason
+    stopifnot(!is.null(idvar))
+    covs$clustervar = covs[,idvar]
+    # can't do logistc with idvar of id, gives bad results for some reason
     s = summary(geeglm(formula, id=clustervar, data=covs, corstr=corstr))
     mm = model.matrix(formula, covs)
     covariate = colnames(mm)[1 + as.integer(colnames(mm)[1] == "(Intercept)")]
@@ -268,8 +269,9 @@ mixed_modelr = function(covs, formula){
 #' 
 #' @param covs covariate data.frame containing the terms in formula
 #'        except "methylation" which is added automatically
-#' @param methylation a matrix of correlated data.
+#' @param meth a matrix of correlated data.
 #' @param formula an R formula containing "methylation"
+#' @param r.corr list of weights between kernel and rare variant test.
 #' @return \code{c(covariate, p, coef)} where p and coef are for the coefficient
 #'         of the first term on the RHS of the model.
 #' @export
@@ -307,7 +309,7 @@ long.covs = function(covs, meth){
 
 #' @export
 clust.lm = function(covs, meth, formula,
-                    gee.corstr=NULL, gee.clustervar=NULL,
+                    gee.corstr=NULL, gee.idvar=NULL,
                     limma.block=NULL, bumping=FALSE, liptak=FALSE, skat=FALSE){
 
     formula = as.formula(formula)
@@ -346,8 +348,8 @@ clust.lm = function(covs, meth, formula,
         return(mixed_modelr(covs, formula))
     # GEE
     } else if (!is.null(gee.corstr)){
-        stopifnot(!is.null(gee.clustervar))
-        return(geer(covs, formula, cluster_col=gee.clustervar, corstr=gee.corstr))
+        stopifnot(!is.null(gee.idvar))
+        return(geer(covs, formula, idvar=gee.idvar, corstr=gee.corstr))
     # limma
     } else {
         # TODO this goes in the matrix section above and uses
@@ -416,9 +418,9 @@ if(FALSE){
     print(fclust.lm(covs, meth, methylation ~ disease, liptak=TRUE))
 
     print(fclust.lm(covs, meth, methylation ~ disease + (1|id)))
-    #print(clust.lm(covs, methylation ~ gene.E, gee.clustervar="id", gee.corstr="ex"))
-    print(fclust.lm(covs, meth, methylation ~ disease, gee.clustervar="id", gee.corstr="ex"))
-    print(fclust.lm(covs, meth, methylation ~ disease, gee.clustervar="id", gee.corstr="ar"))
+    #print(clust.lm(covs, methylation ~ gene.E, gee.idvar="id", gee.corstr="ex"))
+    print(fclust.lm(covs, meth, methylation ~ disease, gee.idvar="id", gee.corstr="ex"))
+    print(fclust.lm(covs, meth, methylation ~ disease, gee.idvar="id", gee.corstr="ar"))
     print('bumping')
     print(fclust.lm(covs, meth, methylation ~ disease, bumping=TRUE))
     print(clust.lm(covs, as.matrix(meth), disease ~ 1, skat=TRUE))
@@ -494,7 +496,7 @@ test_X = function(){
 
     cprint("\nGEE")
     formula = methylation ~ disease #+ (1|id) + (1|CpG)
-    df = fclust.lm.X(covs, meth, formula, X, testing=TRUE, gee.corstr="ar", gee.clustervar="id")
+    df = fclust.lm.X(covs, meth, formula, X, testing=TRUE, gee.corstr="ar", gee.idvar="id")
     print(head(df[order(as.numeric(df$p)),], n=5))
 
     cprint("\nbumping")

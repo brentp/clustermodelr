@@ -11,9 +11,11 @@ Stouffer-Liptak method}
   formula except "methylation" which is added
   automatically}
 
-  \item{methylation}{a matrix of correlated data.}
+  \item{meth}{a matrix of correlated data.}
 
   \item{formula}{an R formula containing "methylation"}
+
+  \item{cor.method}{either "spearman" or "pearson"}
 }
 \value{
   \code{covariate, p, coef} where p and coef are for the

@@ -3,7 +3,7 @@
 \title{Use Generalized Estimating Equations to assign significance to a cluster
 of data.}
 \usage{
-  geer(covs, formula, cluster_col = "CpG", corstr = "ex")
+  geer(covs, formula, idvar = "CpG", corstr = "ex")
 }
 \arguments{
   \item{covs}{covariate data.frame containing the terms in
@@ -14,8 +14,7 @@ of data.}
 
   \item{formula}{an R formula containing "methylation"}
 
-  \item{cluster.idvar}{idvar sent to
-  \code{geepack::geeglm}}
+  \item{idvar}{idvar sent to \code{geepack::geeglm}}
 
   \item{corstr}{the corstr sent to \code{geepack::geeglm}}
 }
