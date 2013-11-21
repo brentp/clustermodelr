@@ -37,7 +37,10 @@
 #' @docType package
 #' @name clustermodelr
 
-suppressPackageStartupMessages(library('limma', quietly=TRUE))
+
+
+suppressPackageStartupMessages(library(limma, quietly=TRUE))
+
 
 #' Run lm on a single site
 #' 
@@ -93,6 +96,7 @@ stouffer_liptakr = function(covs, meth, formula, cor.method="spearman"){
     # TODO: what if missing data in covariates.
     # set up another method that runs each in lm() and pulls the coefficents
     # and pvalues
+    library(limma)
     covs$methylation = 1 # 
     sigma = cor(meth, method=cor.method)
     meth = t(meth)
@@ -301,7 +305,7 @@ long.covs = function(covs, meth){
     covs
 }
 
-
+#' @export
 clust.lm = function(covs, meth, formula,
                     gee.corstr=NULL, gee.clustervar=NULL,
                     limma.block=NULL, bumping=FALSE, liptak=FALSE, skat=FALSE){
@@ -353,7 +357,8 @@ clust.lm = function(covs, meth, formula,
 
 }
 
-# see send_bin.py
+#' used to communicate quickly from python
+#' @export
 read.bin = function(bin.file){
     conn = file(bin.file, 'rb')
     n_sites = readBin(conn, what=integer(), size=8, n=1)
@@ -369,7 +374,7 @@ read.bin = function(bin.file){
     l
 }
 
-
+#' @export
 fclust.lm = function(covs, meths, formula, gee.corstr=NULL, ..., mc.cores=4){
     if(is.character(covs)) covs = read.csv(covs)
 
@@ -420,12 +425,14 @@ if(FALSE){
 }
 
 
+#' @export
 readX = function(fname){
     X = as.matrix(read.delim(gzfile(fname), row.names=1))
     rownames(X) = gsub("-|:| ", ".", as.character(rownames(X)), perl=TRUE)
     X
 } 
 
+#' @export
 fclust.lm.X = function(covs, meth, formula, X, gee.corstr=NULL, ..., mc.cores=4, testing=FALSE){
     library(parallel)
     library(data.table)
@@ -519,3 +526,4 @@ test_X = function(){
 
 }
 #test_X()
+
