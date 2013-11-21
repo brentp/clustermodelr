@@ -168,8 +168,10 @@ sum.lowess = function(icoefs, weights, span=0.2){
 #' 
 #' @param covs covariate data.frame containing the terms in formula
 #'        except "methylation" which is added automatically
-#' @param methylation a matrix of correlated data.
+#' @param methyl a matrix of correlated data.
 #' @param formula an R formula containing "methylation"
+#' @param n_sims this is currently used as the minimum number of shuffled data
+#'        sets to compare to. If the p-value is low, it will do more shufflings
 #' @return \code{covariate, p, coef} where p and coef are for the coefficient
 #'         of the first term on the RHS of the model.
 #' @export

@@ -21,3 +21,5 @@ Imports:
     data.table
 Collate:
     'clustermodelr.R'
+Suggests:
+    testthat

@@ -9,9 +9,13 @@
   formula except "methylation" which is added
   automatically}
 
-  \item{methylation}{a matrix of correlated data.}
+  \item{methyl}{a matrix of correlated data.}
 
   \item{formula}{an R formula containing "methylation"}
+
+  \item{n_sims}{this is currently used as the minimum
+  number of shuffled data sets to compare to. If the
+  p-value is low, it will do more shufflings}
 }
 \value{
   \code{covariate, p, coef} where p and coef are for the
