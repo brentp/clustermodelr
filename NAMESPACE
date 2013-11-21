@@ -1,0 +1,7 @@
+export(bumpingr)
+export(geer)
+export(lmr)
+export(mixed_modelr)
+export(skatr)
+export(stouffer_liptak)
+export(stouffer_liptakr)

@@ -1,0 +1,30 @@
+\name{geer}
+\alias{geer}
+\title{Use Generalized Estimating Equations to assign significance to a cluster
+of data.}
+\usage{
+  geer(covs, formula, cluster_col = "CpG", corstr = "ex")
+}
+\arguments{
+  \item{covs}{covariate data.frame containing the terms in
+  formula except "methylation" which is added
+  automatically}
+
+  \item{methylation}{a matrix of correlated data.}
+
+  \item{formula}{an R formula containing "methylation"}
+
+  \item{cluster.idvar}{idvar sent to
+  \code{geepack::geeglm}}
+
+  \item{corstr}{the corstr sent to \code{geepack::geeglm}}
+}
+\value{
+  \code{c(covariate, p, coef)} where p and coef are for the
+  coefficient of the first term on the RHS of the model.
+}
+\description{
+  Use Generalized Estimating Equations to assign
+  significance to a cluster of data.
+}
+

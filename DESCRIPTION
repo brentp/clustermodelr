@@ -1,0 +1,19 @@
+Package: clustermodelr
+Type: Package
+Title: Models on clusters of correlated data
+Version: 0.1
+Date: 2013-11-20
+Author: Brent Pedersen
+Maintainer: Brent Pedersen <bpederse@gmail.com>
+Description: More about what it does (maybe more than one line)
+License: MIT
+Imports:
+    lme4,
+    parallel,
+    geepack,
+    limma,
+    SKAT,
+    multcomp,
+    data.table
+Collate:
+    'clustermodelr.R'
