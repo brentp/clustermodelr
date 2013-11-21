@@ -9,7 +9,7 @@
   formula except "methylation" which is added
   automatically}
 
-  \item{methyl}{a matrix of correlated data.}
+  \item{meth}{a matrix of correlated data.}
 
   \item{formula}{an R formula containing "methylation"}
 

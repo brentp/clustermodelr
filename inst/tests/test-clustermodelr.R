@@ -37,22 +37,22 @@ test_X = function(){
 
     cprint("\nmixed-effects model")
     formula = methylation ~ disease + (1|id) + (1|CpG)
-    df = fclust.lm.X(covs, meth, formula, X, testing=TRUE)
+    df = mclust.lm.X(covs, meth, formula, X, testing=TRUE)
     print(head(df[order(as.numeric(df$p)),], n=5))
 
     cprint("\nGEE")
     formula = methylation ~ disease #+ (1|id) + (1|CpG)
-    df = fclust.lm.X(covs, meth, formula, X, testing=TRUE, gee.corstr="ar", gee.clustervar="id")
+    df = mclust.lm.X(covs, meth, formula, X, testing=TRUE, gee.corstr="ar", gee.clustervar="id")
     print(head(df[order(as.numeric(df$p)),], n=5))
 
     cprint("\nbumping")
     formula = methylation ~ disease #+ (1|id) + (1|CpG)
-    df = fclust.lm.X(covs, meth, formula, X, testing=TRUE, bumping=TRUE)
+    df = mclust.lm.X(covs, meth, formula, X, testing=TRUE, bumping=TRUE)
     print(head(df[order(as.numeric(df$p)),], n=5))
 
     cprint("\nliptak")
     formula = methylation ~ disease #+ (1|id) + (1|CpG)
-    dfl = fclust.lm.X(covs, meth, formula, X, testing=TRUE, liptak=TRUE)
+    dfl = mclust.lm.X(covs, meth, formula, X, testing=TRUE, liptak=TRUE)
     print(head(dfl[order(dfl$p),], n=5))
     print(dfl[dfl$covariate == "A_33_P3403576",])
 

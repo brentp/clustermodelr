@@ -7,10 +7,10 @@ Author: Brent Pedersen
 Maintainer: Brent Pedersen <bpederse@gmail.com>
 Description: clustermodelr provides a consistent, simple interface to model
     clustered, correlated data using a number of different methods. It is
-    targetted to methylation data, but can be used for any type of correlated
+    targeted to methylation data, but can be used for any type of correlated
     data. Also see: https://github.com/brentp/clustermodel/ which uses this
     package.
-License: MIT
+License: MIT + file LICENSE
 Imports:
     lme4,
     parallel,
@@ -22,4 +22,11 @@ Imports:
 Collate:
     'clustermodelr.R'
 Suggests:
-    testthat
+    testthat,
+    lme4,
+    parallel,
+    geepack,
+    limma,
+    SKAT,
+    multcomp,
+    data.table

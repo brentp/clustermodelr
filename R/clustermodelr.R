@@ -72,13 +72,13 @@ lmr = function(covs, methylation, formula){
 #' @param sigma a matrix of shape \code{nrow=ncol=length(pvalues)}
 #' @return combined p-value
 #' @export
-stouffer_liptak = function(pvalues, sigma, lower.tail=TRUE){
-    qvalues = qnorm(pvalues, mean=0, sd=1, lower.tail=lower.tail)
+stouffer_liptak = function(pvalues, sigma){
+    qvalues = qnorm(pvalues, mean=0, sd=1, lower.tail=TRUE)
     C = chol(sigma)
     Cm1 = solve(C) # C^-1
     qvalues = Cm1 %*% qvalues # Qstar = C^-1 * Q
     Cp = sum(qvalues) / sqrt(length(qvalues))
-    pnorm(Cp, mean=0, sd=1, lower.tail=lower.tail)
+    pnorm(Cp, mean=0, sd=1, lower.tail=TRUE)
 }
 
 
@@ -168,7 +168,7 @@ sum.lowess = function(icoefs, weights, span=0.2){
 #' 
 #' @param covs covariate data.frame containing the terms in formula
 #'        except "methylation" which is added automatically
-#' @param methyl a matrix of correlated data.
+#' @param meth a matrix of correlated data.
 #' @param formula an R formula containing "methylation"
 #' @param n_sims this is currently used as the minimum number of shuffled data
 #'        sets to compare to. If the p-value is low, it will do more shufflings
@@ -210,7 +210,6 @@ bumpingr = function(covs, meth, formula, n_sims=100){
 #' 
 #' @param covs covariate data.frame containing the terms in formula
 #'        except "methylation" which is added automatically
-#' @param methylation a matrix of correlated data.
 #' @param formula an R formula containing "methylation"
 #' @param idvar idvar sent to \code{geepack::geeglm}
 #' @param corstr the corstr sent to \code{geepack::geeglm}
@@ -224,7 +223,10 @@ geer = function(covs, formula, idvar="CpG", corstr="ex"){
     }
     suppressPackageStartupMessages(library('geepack', quietly=TRUE))
     stopifnot(!is.null(idvar))
-    covs$clustervar = covs[,idvar]
+
+    # NOTE, both of these are required as geeglm needs to deparse and
+    # R CRAN has to make sure clustervar exists.
+    clustervar = covs$clustervar = covs[,idvar]
     # can't do logistc with idvar of id, gives bad results for some reason
     s = summary(geeglm(formula, id=clustervar, data=covs, corstr=corstr))
     mm = model.matrix(formula, covs)
@@ -246,7 +248,6 @@ geer = function(covs, formula, idvar="CpG", corstr="ex"){
 #' 
 #' @param covs covariate data.frame containing the terms in formula
 #'        except "methylation" which is added automatically
-#' @param methylation a matrix of correlated data.
 #' @param formula an R formula containing "methylation"
 #' @return \code{c(covariate, p, coef)} where p and coef are for the coefficient
 #'         of the first term on the RHS of the model.
@@ -309,13 +310,31 @@ long.covs = function(covs, meth){
     covs
 }
 
+#' dispatch to one of the implemented cluster methods
+#' 
+#' For every method except mixed_model, one or more of the arguments
+#' must be specified. To run a linear model, simply send the formula
+#' in lme4 syntax
+#' 
+#' @param covs covariate data.frame containing the terms in formula
+#'        except "methylation" which is added automatically
+#' @param meth a matrix of correlated data.
+#' @param formula an R formula containing "methylation"
+#' @param gee.corstr if specified, the the corstr arg to geeglm.
+#'        gee.idvar must also be specified.
+#' @param gee.idvar if specified, the cluster variable to geeglm
+#' @param bumping if true then the bumping algorithm is used.
+#' @param liptak if true then run the model on each probe in \code{meth}
+#'        and perform the stouffer-liptak correction on the p-values
+#' @param skat use the SKAT method to test associated. In this case, the
+#'        model will look like: \code{disease ~ 1} and it will be tested
+#'        against the methylation matrix
 #' @export
 clust.lm = function(covs, meth, formula,
                     gee.corstr=NULL, gee.idvar=NULL,
-                    limma.block=NULL, bumping=FALSE, liptak=FALSE, skat=FALSE){
+                    bumping=FALSE, liptak=FALSE, skat=FALSE){
 
     formula = as.formula(formula)
-    stopifnot(is.null(gee.corstr) || is.null(limma.block))
 
     if(ncol(meth) == 1 || is.vector(meth)){
         # just got one column, so we force it to use a linear model
@@ -345,7 +364,7 @@ clust.lm = function(covs, meth, formula,
     covs = long.covs(covs, meth) # TODO: make this send just the nrow, ncol
     is.mixed.model = any(grepl("|", attr(terms(formula), 'term.labels'), fixed=TRUE))
     # mixed-model
-    if (is.null(gee.corstr) && is.null(limma.block)){
+    if (is.null(gee.corstr)){
         stopifnot(is.mixed.model)
         return(mixed_modelr(covs, formula))
     # GEE
@@ -363,6 +382,7 @@ clust.lm = function(covs, meth, formula,
 
 #' used to communicate quickly from python
 #' @export
+#' @param bin.file file with binary data
 read.bin = function(bin.file){
     conn = file(bin.file, 'rb')
     n_sites = readBin(conn, what=integer(), size=8, n=1)
@@ -378,8 +398,21 @@ read.bin = function(bin.file){
     l
 }
 
+#' dispatch to one of the implemented cluster methods. potentially reading
+#' the covariates from a file and parallelizing.
+#' 
+#' See \code{\link{clust.lm}}
+#' 
+#' @param covs covariate data.frame containing the terms in formula
+#'        except "methylation" which is added automatically
+#' @param meths a list of matrices of correlated data.
+#' @param formula an R formula containing "methylation"
+#' @param gee.corstr if specified, the the corstr arg to geeglm.
+#' @param mc.cores the number of processors to use if meths is a list of
+#'        matrices to test.
+#' @param ... arguments sent to \code{\link{clust.lm}}
 #' @export
-fclust.lm = function(covs, meths, formula, gee.corstr=NULL, ..., mc.cores=4){
+mclust.lm = function(covs, meths, formula, gee.corstr=NULL, ..., mc.cores=4){
     if(is.character(covs)) covs = read.csv(covs)
 
     # its a single entry, not list of matrices that we can parallelize
@@ -414,21 +447,23 @@ if(FALSE){
     meth = cbind(meth[,1])
     print(ncol(meth))
 
-    print(fclust.lm(covs, meth, methylation ~ disease + (1|id) + (1|CpG)))
+    print(mclust.lm(covs, meth, methylation ~ disease + (1|id) + (1|CpG)))
 
     print('liptak')
-    print(fclust.lm(covs, meth, methylation ~ disease, liptak=TRUE))
+    print(mclust.lm(covs, meth, methylation ~ disease, liptak=TRUE))
 
-    print(fclust.lm(covs, meth, methylation ~ disease + (1|id)))
+    print(mclust.lm(covs, meth, methylation ~ disease + (1|id)))
     #print(clust.lm(covs, methylation ~ gene.E, gee.idvar="id", gee.corstr="ex"))
-    print(fclust.lm(covs, meth, methylation ~ disease, gee.idvar="id", gee.corstr="ex"))
-    print(fclust.lm(covs, meth, methylation ~ disease, gee.idvar="id", gee.corstr="ar"))
+    print(mclust.lm(covs, meth, methylation ~ disease, gee.idvar="id", gee.corstr="ex"))
+    print(mclust.lm(covs, meth, methylation ~ disease, gee.idvar="id", gee.corstr="ar"))
     print('bumping')
-    print(fclust.lm(covs, meth, methylation ~ disease, bumping=TRUE))
+    print(mclust.lm(covs, meth, methylation ~ disease, bumping=TRUE))
     print(clust.lm(covs, as.matrix(meth), disease ~ 1, skat=TRUE))
 }
 
-
+#' read a matrix of numeric values with the first column as the row.names
+#'
+#' @param fname the file name of the Xpression dataset to read.
 #' @export
 readX = function(fname){
     X = as.matrix(read.delim(gzfile(fname), row.names=1))
@@ -436,8 +471,42 @@ readX = function(fname){
     X
 } 
 
+#' dispatch to one of the implemented cluster methods. potentially reading
+#' the covariates from a file and parallelizing.
+#'
+#' This method implements a sorted of methyl-eQTL with a formula specified
+#' as:
+#' 
+#'    \code{methylation ~ disease + age}
+#'
+#' each row in \code{X} is inserted into the model and tested so the model
+#' would be:
+#'
+#'    \code{methylation ~ X[irow,] + disease + age}
+#'
+#' and the reported coefficent and p-value are from the X[irow,] covariate.
+#' This allows one to test a number of expression probes against a (number
+#' of) cluster of correlated methylation probes. Though we could also use
+#' this to test, for example a set of methylation probes against every OTU
+#' in a microbiome study. In this way, we could find DMRs related to the
+#' microbiome.
+#' 
+#' See \code{\link{clust.lm}}
+#' 
+#' @param covs covariate data.frame containing the terms in formula
+#'        except "methylation" which is added automatically
+#' @param meth a list of matrices of correlated data or a single methylation
+#'        matrix
+#' @param formula an R formula containing "methylation"
+#' @param X a matrix with columns matching those in meth. n_probes X n_samples.
+#'        Each row is tested by modifying \code{formula} so that it becomes the
+#'        independent variable in the model and tested against methylation.
+#' @param gee.corstr if specified, the the corstr arg to geeglm.
+#' @param mc.cores the number of processors to use if meths is a list of
+#'        matrices to test.
+#' @param ... arguments sent to \code{\link{clust.lm}}
 #' @export
-fclust.lm.X = function(covs, meth, formula, X, gee.corstr=NULL, ..., mc.cores=4, testing=FALSE){
+mclust.lm.X = function(covs, meth, formula, X, gee.corstr=NULL, ..., mc.cores=4){
     library(parallel)
     library(data.table)
     formula = as.formula(formula)
@@ -451,7 +520,6 @@ fclust.lm.X = function(covs, meth, formula, X, gee.corstr=NULL, ..., mc.cores=4,
 
     mc.cores = min(mc.cores, ncol(X))
 
-    if(testing) X = X[400:408,]
     rnames = rownames(X)
 
     stopifnot(nrow(covs) %% ncol(X) == 0)
@@ -473,7 +541,7 @@ fclust.lm.X = function(covs, meth, formula, X, gee.corstr=NULL, ..., mc.cores=4,
         covs2[,rnames[irow]] = X.row
         sformula = sprintf("%s ~ %s + %s", lhs, rnames[irow], rhs)
         # call with 1 core since we're already parallel here.
-        res = fclust.lm(covs2, meth, as.formula(sformula),
+        res = mclust.lm(covs2, meth, as.formula(sformula),
                            gee.corstr=gee.corstr, ..., mc.cores=1)
         res$X = rnames[irow]
         res$model = sformula
@@ -493,22 +561,22 @@ test_X = function(){
 
     cprint("\nmixed-effects model")
     formula = methylation ~ disease + (1|id) + (1|CpG)
-    df = fclust.lm.X(covs, meth, formula, X, testing=TRUE)
+    df = mclust.lm.X(covs, meth, formula, X, testing=TRUE)
     print(head(df[order(as.numeric(df$p)),], n=5))
 
     cprint("\nGEE")
     formula = methylation ~ disease #+ (1|id) + (1|CpG)
-    df = fclust.lm.X(covs, meth, formula, X, testing=TRUE, gee.corstr="ar", gee.idvar="id")
+    df = mclust.lm.X(covs, meth, formula, X, testing=TRUE, gee.corstr="ar", gee.idvar="id")
     print(head(df[order(as.numeric(df$p)),], n=5))
 
     cprint("\nbumping")
     formula = methylation ~ disease #+ (1|id) + (1|CpG)
-    df = fclust.lm.X(covs, meth, formula, X, testing=TRUE, bumping=TRUE)
+    df = mclust.lm.X(covs, meth, formula, X, testing=TRUE, bumping=TRUE)
     print(head(df[order(as.numeric(df$p)),], n=5))
 
     cprint("\nliptak")
     formula = methylation ~ disease #+ (1|id) + (1|CpG)
-    dfl = fclust.lm.X(covs, meth, formula, X, testing=TRUE, liptak=TRUE)
+    dfl = mclust.lm.X(covs, meth, formula, X, testing=TRUE, liptak=TRUE)
     print(head(dfl[order(dfl$p),], n=5))
     print(dfl[dfl$covariate == "A_33_P3403576",])
 

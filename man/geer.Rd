@@ -10,8 +10,6 @@ of data.}
   formula except "methylation" which is added
   automatically}
 
-  \item{methylation}{a matrix of correlated data.}
-
   \item{formula}{an R formula containing "methylation"}
 
   \item{idvar}{idvar sent to \code{geepack::geeglm}}

@@ -2,7 +2,7 @@
 \alias{stouffer_liptak}
 \title{Perform the stouffer-liptak correction on a set of correlated pvalues}
 \usage{
-  stouffer_liptak(pvalues, sigma, lower.tail = TRUE)
+  stouffer_liptak(pvalues, sigma)
 }
 \arguments{
   \item{pvalues}{a vector of pvalues}
