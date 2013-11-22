@@ -172,10 +172,11 @@ sum.lowess = function(icoefs, weights, span=0.2){
 #' @param formula an R formula containing "methylation"
 #' @param n_sims this is currently used as the minimum number of shuffled data
 #'        sets to compare to. If the p-value is low, it will do more shufflings
+#' @param mc.cores sent to mclapply for parallelization
 #' @return \code{list(covariate, p, coef)} where p and coef are for the coefficient
 #'         of the first term on the RHS of the model.
 #' @export
-bumpingr = function(covs, meth, formula, n_sims=100){
+bumpingr = function(covs, meth, formula, n_sims=100, mc.cores=1){
     suppressPackageStartupMessages(library('parallel', quietly=TRUE))
     covs$methylation = 1 # for formula => model.matrix
 
@@ -186,7 +187,8 @@ bumpingr = function(covs, meth, formula, n_sims=100){
         meth = t(meth)
     }
 
-    sim_beta_sums = permute.residuals(meth, mod, mod0, iterations=n_sims)
+    sim_beta_sums = permute.residuals(meth, mod, mod0, iterations=n_sims, 
+                                      mc.cores=mc.cores)
     stopifnot(length(sim_beta_sums) == n_sims)
 
     fit = lmFit(meth, mod)

@@ -2,7 +2,7 @@
 \alias{bumpingr}
 \title{Run a local bump-hunting algorithm}
 \usage{
-  bumpingr(covs, meth, formula, n_sims = 100)
+  bumpingr(covs, meth, formula, n_sims = 100, mc.cores = 1)
 }
 \arguments{
   \item{covs}{covariate data.frame containing the terms in
@@ -16,6 +16,8 @@
   \item{n_sims}{this is currently used as the minimum
   number of shuffled data sets to compare to. If the
   p-value is low, it will do more shufflings}
+
+  \item{mc.cores}{sent to mclapply for parallelization}
 }
 \value{
   \code{list(covariate, p, coef)} where p and coef are for
