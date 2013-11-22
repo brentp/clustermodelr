@@ -18,8 +18,9 @@
   variant test.}
 }
 \value{
-  \code{c(covariate, p, coef)} where p and coef are for the
-  coefficient of the first term on the RHS of the model.
+  \code{list(covariate, p, coef)} where p and coef are for
+  the coefficient of the first term on the RHS of the
+  model.
 }
 \description{
   An example model would look like: disease ~ 1 And the

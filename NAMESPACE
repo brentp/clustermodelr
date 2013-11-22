@@ -1,6 +1,8 @@
 export(bumpingr)
 export(clust.lm)
+export(expand.covs)
 export(geer)
+export(gen.correlated)
 export(lmr)
 export(mclust.lm)
 export(mclust.lm.X)

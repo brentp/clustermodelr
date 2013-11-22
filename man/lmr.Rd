@@ -15,8 +15,9 @@
   \item{formula}{an R formula containing "methylation"}
 }
 \value{
-  \code{covariate, p, coef} where p and coef are for the
-  coefficient of the first term on the RHS of the model.
+  \code{list(covariate, p, coef)} where p and coef are for
+  the coefficient of the first term on the RHS of the
+  model.
 }
 \description{
   Unlike most of the function in this package, this

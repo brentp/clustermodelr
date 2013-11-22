@@ -51,7 +51,7 @@ suppressPackageStartupMessages(library(limma, quietly=TRUE))
 #' @param methylation a single column matrix or a vector the same length
 #'        as \code{nrow(covs)}
 #' @param formula an R formula containing "methylation"
-#' @return \code{covariate, p, coef} where p and coef are for the coefficient
+#' @return \code{list(covariate, p, coef)} where p and coef are for the coefficient
 #'         of the first term on the RHS of the model.
 #' @export
 lmr = function(covs, methylation, formula){
@@ -59,7 +59,7 @@ lmr = function(covs, methylation, formula){
     s = summary(lm(formula, covs))$coefficients
     covariate = rownames(s)[2]
     row = s[2,]
-    c(covariate, row[['Pr(>|t|)']], row[['Estimate']])
+    list(covariate=covariate, p=row[['Pr(>|t|)']], coef=row[['Estimate']])
 }
 
 #' Perform the stouffer-liptak correction on a set of correlated pvalues
@@ -90,7 +90,7 @@ stouffer_liptak = function(pvalues, sigma){
 #' @param meth a matrix of correlated data.
 #' @param formula an R formula containing "methylation"
 #' @param cor.method either "spearman" or "pearson"
-#' @return \code{covariate, p, coef} where p and coef are for the coefficient
+#' @return \code{list(covariate, p, coef)} where p and coef are for the coefficient
 #'         of the first term on the RHS of the model.
 #' @export
 stouffer_liptakr = function(covs, meth, formula, cor.method="spearman"){
@@ -111,7 +111,7 @@ stouffer_liptakr = function(covs, meth, formula, cor.method="spearman"){
     beta.ave = sum(beta.orig) / length(beta.orig)
 
     p = stouffer_liptak(pvals, sigma)
-    return(c(covariate, p, beta.ave))
+    return(list(covariate=covariate, p=p, coef=beta.ave))
 }
 
 # for bumping
@@ -172,7 +172,7 @@ sum.lowess = function(icoefs, weights, span=0.2){
 #' @param formula an R formula containing "methylation"
 #' @param n_sims this is currently used as the minimum number of shuffled data
 #'        sets to compare to. If the p-value is low, it will do more shufflings
-#' @return \code{covariate, p, coef} where p and coef are for the coefficient
+#' @return \code{list(covariate, p, coef)} where p and coef are for the coefficient
 #'         of the first term on the RHS of the model.
 #' @export
 bumpingr = function(covs, meth, formula, n_sims=100){
@@ -202,7 +202,7 @@ bumpingr = function(covs, meth, formula, n_sims=100){
     if(ngt < 10 & n_sims == 2000) return(bumpingr(covs, meth, formula, 5000))
     if(ngt < 10 & n_sims == 5000) return(bumpingr(covs, meth, formula, 15000))
     pval = (1 + ngt) / (1 + n_sims)
-    return(c(covariate, pval, raw_beta_sum / nrow(meth)))
+    return(list(covariate=covariate, p=pval, coef=raw_beta_sum / nrow(meth)))
 }
 
 #' Use Generalized Estimating Equations to assign significance to a cluster
@@ -213,7 +213,7 @@ bumpingr = function(covs, meth, formula, n_sims=100){
 #' @param formula an R formula containing "methylation"
 #' @param idvar idvar sent to \code{geepack::geeglm}
 #' @param corstr the corstr sent to \code{geepack::geeglm}
-#' @return \code{c(covariate, p, coef)} where p and coef are for the coefficient
+#' @return \code{list(covariate, p, coef)} where p and coef are for the coefficient
 #'         of the first term on the RHS of the model.
 #' @export
 geer = function(covs, formula, idvar="CpG", corstr="ex"){
@@ -232,8 +232,7 @@ geer = function(covs, formula, idvar="CpG", corstr="ex"){
     mm = model.matrix(formula, covs)
     covariate = colnames(mm)[1 + as.integer(colnames(mm)[1] == "(Intercept)")]
     row = s$coefficients[covariate,]
-    stat = row[['Wald']]
-    return(c(covariate, row[['Pr(>|W|)']], row[['Estimate']]))
+    return(list(covariate=covariate, p=row[['Pr(>|W|)']], coef=row[['Estimate']]))
 }
 
 #geer(read.csv('tt.csv'), methylation ~ disease, "id", "ex")
@@ -249,7 +248,7 @@ geer = function(covs, formula, idvar="CpG", corstr="ex"){
 #' @param covs covariate data.frame containing the terms in formula
 #'        except "methylation" which is added automatically
 #' @param formula an R formula containing "methylation"
-#' @return \code{c(covariate, p, coef)} where p and coef are for the coefficient
+#' @return \code{list(covariate, p, coef)} where p and coef are for the coefficient
 #'         of the first term on the RHS of the model.
 #' @export
 mixed_modelr = function(covs, formula){
@@ -260,7 +259,7 @@ mixed_modelr = function(covs, formula){
     # take the first column unless it is intercept
     covariate = names(fixef(m))[1 + as.integer(names(fixef(m))[1] == "(Intercept)")]
     s = summary(glht(m, paste(covariate, "0", sep=" == ")))
-    return(c(covariate, s$test$pvalues[[1]], s$test$coefficients[[1]]))
+    return(list(covariate=covariate, p=s$test$pvalues[[1]], coef=s$test$coefficients[[1]]))
 }
 
 #' Use SKAT to associate a covariate with a cluster of data.
@@ -275,7 +274,7 @@ mixed_modelr = function(covs, formula){
 #' @param meth a matrix of correlated data.
 #' @param formula an R formula containing "methylation"
 #' @param r.corr list of weights between kernel and rare variant test.
-#' @return \code{c(covariate, p, coef)} where p and coef are for the coefficient
+#' @return \code{list(covariate, p, coef)} where p and coef are for the coefficient
 #'         of the first term on the RHS of the model.
 #' @export
 skatr = function(covs, meth, formula, r.corr=c(0.00, 0.015, 0.06, 0.15)){
@@ -289,20 +288,24 @@ skatr = function(covs, meth, formula, r.corr=c(0.00, 0.015, 0.06, 0.15)){
     #sk <- SKAT(meth, obj, is_check_genotype=TRUE, method="optimal.adj", kernel="linear.weighted", weights.beta=c(1, 10))
     #sk <- SKAT(meth, obj, is_check_genotype=TRUE, method="optimal.adj", kernel="linear")
     #sink()
-    return(c(covariate, sk$p.value, NaN))
+    return(list(covariate=covariate, p=sk$p.value, coef=NaN))
 }
 
-#covs = read.csv('/tmp/sk.csv')
-#skatr(covs, asthma ~ age + gender + race_white + race_hispanic + race_aa)
-
-long.covs = function(covs, meth){
+#' convert data to long format so that \code{covs} is replicated once for
+#' each column in \code{meth}
+#'
+#' @param covs data.frame of covariates
+#' @param meth matrix of methylation with same number of rows as \code{covs}
+#' @export
+expand.covs = function(covs, meth){
+    if(!"id" %in% colnames(covs)) covs$id = 1:nrow(covs)
     n_samples = nrow(covs)
     meth = as.matrix(meth)
     stopifnot(nrow(meth) == n_samples)
     # e.g. meth is 68 patients * 4 CpGs
     #      covs is 68 patients * 5 covariates
     # need to replicated covs 4 times (1 per CpG)
-    covs = covs[rep(1:nrow(covs), ncol(meth)),]
+    covs = covs[rep(1:nrow(covs), ncol(meth)),, drop=FALSE]
     cpgs = 1:ncol(meth)
     dim(meth) = NULL
     covs$methylation = meth
@@ -361,7 +364,7 @@ clust.lm = function(covs, meth, formula,
     ###########################################
     # GEE and mixed models require long format.
     ###########################################
-    covs = long.covs(covs, meth) # TODO: make this send just the nrow, ncol
+    covs = expand.covs(covs, meth) # TODO: make this send just the nrow, ncol
     is.mixed.model = any(grepl("|", attr(terms(formula), 'term.labels'), fixed=TRUE))
     # mixed-model
     if (is.null(gee.corstr)){
@@ -418,7 +421,7 @@ mclust.lm = function(covs, meths, formula, gee.corstr=NULL, ..., mc.cores=4){
     # its a single entry, not list of matrices that we can parallelize
     if(is.matrix(meths) || is.data.frame(meths)){
         res = (clust.lm(covs, meths, formula, gee.corstr=gee.corstr, ...))
-        return(data.frame(covariate=res[1], p=res[2], coef=res[3]))
+        return(data.frame(res))
     }
 
     suppressPackageStartupMessages(library('data.table', quietly=TRUE))
@@ -428,9 +431,10 @@ mclust.lm = function(covs, meths, formula, gee.corstr=NULL, ..., mc.cores=4){
     results = mclapply(cluster_ids, function(cs){
         res = try(clust.lm(covs, meths[[cs]], formula, gee.corstr=gee.corstr, ...))
         if(!inherits(res, "try-error")){
-            return(list(covariate=res[1], p=res[2], coef=res[3], cluster_id=cs))
+            res$cluster_id = cs
+            return(res)
         }
-            return(list(covariate=NA, p=NaN, coef=NaN, cluster_id=cs))
+        return(list(covariate=NA, p=NaN, coef=NaN, cluster_id=cs))
     }, mc.cores=mc.cores)
     results = rbindlist(results)
     rownames(results) = cluster_ids
@@ -551,6 +555,24 @@ mclust.lm.X = function(covs, meth, formula, X, gee.corstr=NULL, ..., mc.cores=4)
 }
 
 cprint = function(...) write(..., stdout())
+
+#' generate correlated data
+#'
+#' @param rho numeric correlation value between 0 and 1
+#' @param n_samples generate data for this many samples
+#' @param n_sites generate data for this many sites (CpGs)
+#' @param mean sent to \code{rnorm}
+#' @param sd sent to \code{rnorm}
+#' @return mat n_samples * n_sites matrix where \code{cor(mat[,1], mat[,2])} is
+#'         on average equal to \code{rho}
+#' @export
+gen.correlated = function(rho, n_samples=100, n_sites=4, mean=0, sd=1){
+    X = matrix(rnorm(n_samples * n_sites, mean=mean, sd=sd), nrow=n_samples)
+    sigma = diag(n_sites)
+    sigma <- rho ^ abs(row(sigma)-col(sigma))
+    X %*% chol(sigma)
+}
+
 
 test_X = function(){
     covs = read.delim("clustercorr/tests/example-covariates.txt")

@@ -18,8 +18,9 @@
   p-value is low, it will do more shufflings}
 }
 \value{
-  \code{covariate, p, coef} where p and coef are for the
-  coefficient of the first term on the RHS of the model.
+  \code{list(covariate, p, coef)} where p and coef are for
+  the coefficient of the first term on the RHS of the
+  model.
 }
 \description{
   This performs a similar task to the Bump-Hunting

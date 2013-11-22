@@ -11,6 +11,8 @@ test_that("can run single column", {
     meth1 = cbind(meth[,1])
     formula = methylation ~ disease
     expect_that(length(lmr(covs, meth1, formula)), equals(3))
+    expect_true("p" %in% names(lmr(covs, meth1, formula)))
+    expect_true("coef" %in% names(lmr(covs, meth1, formula)))
 })
 
 test_that("can run models", {

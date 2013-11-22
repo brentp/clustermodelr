@@ -18,8 +18,9 @@ Stouffer-Liptak method}
   \item{cor.method}{either "spearman" or "pearson"}
 }
 \value{
-  \code{covariate, p, coef} where p and coef are for the
-  coefficient of the first term on the RHS of the model.
+  \code{list(covariate, p, coef)} where p and coef are for
+  the coefficient of the first term on the RHS of the
+  model.
 }
 \description{
   Run lm on each column in a cluster and combine p-values
