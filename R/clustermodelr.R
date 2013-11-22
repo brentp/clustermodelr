@@ -182,6 +182,9 @@ bumpingr = function(covs, meth, formula, n_sims=100){
     mod = model.matrix(formula, covs)
     covariate = colnames(mod)[1 + as.integer(colnames(mod)[1] == "(Intercept)")]
     mod0 = mod[,!colnames(mod) == covariate, drop=FALSE]
+    if((!ncol(meth) == nrow(covs)) && nrow(meth) == nrow(covs)){
+        meth = t(meth)
+    }
 
     sim_beta_sums = permute.residuals(meth, mod, mod0, iterations=n_sims)
     stopifnot(length(sim_beta_sums) == n_sims)
