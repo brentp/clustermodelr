@@ -573,8 +573,19 @@ cprint = function(...) write(..., stdout())
 #' @export
 gen.correlated = function(rho, n_samples=100, n_sites=4, mean=0, sd=1){
     X = matrix(rnorm(n_samples * n_sites, mean=mean, sd=sd), nrow=n_samples)
-    sigma = diag(n_sites)
-    sigma <- rho ^ abs(row(sigma)-col(sigma))
+    make.correlated(rho, X)
+}
+
+#' make existing data correlated
+#'
+#' @param rho numeric correlation value between 0 and 1
+#' @param X n_samples * n_probes data to make correlated
+#' @return mat n_samples * n_sites matrix where \code{cor(mat[,1], mat[,2])} is
+#'         on average equal to \code{rho}
+#' @export
+make.correlated = function(rho, X){
+    sigma = diag(ncol(X))
+    sigma = rho ^ abs(row(sigma) - col(sigma))
     X %*% chol(sigma)
 }
 
