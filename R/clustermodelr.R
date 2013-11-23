@@ -66,7 +66,8 @@ lmr = function(covs, methylation, formula){
 #'
 #' Accepts a list of p-values and a correlation matrix and returns a
 #' single p-value that combines the p-values accounting for their
-#' correlation
+#' correlation. Note that if \code{sigma} is  not positive-definitive,
+#' then off diagonal elements will be multiplied by 0.9999.
 #'
 #' @param pvalues a vector of pvalues
 #' @param sigma a matrix of shape \code{nrow=ncol=length(pvalues)}
@@ -74,7 +75,13 @@ lmr = function(covs, methylation, formula){
 #' @export
 stouffer_liptak = function(pvalues, sigma){
     qvalues = qnorm(pvalues, mean=0, sd=1, lower.tail=TRUE)
-    C = chol(sigma)
+    C = try(chol(sigma), silent=TRUE)
+    if(inherits(C, "try-error")){ 
+        # lower elements.
+        sigma[row(sigma) != col(sigma)] = sigma[row(sigma) != col(sigma)] * 0.999
+        C = chol(sigma)
+    } 
+
     Cm1 = solve(C) # C^-1
     qvalues = Cm1 %*% qvalues # Qstar = C^-1 * Q
     Cp = sum(qvalues) / sqrt(length(qvalues))
@@ -99,7 +106,7 @@ stouffer_liptakr = function(covs, meth, formula, cor.method="spearman"){
     # and pvalues
     library(limma)
     covs$methylation = 1 # 
-    sigma = cor(meth, method=cor.method)
+    sigma = abs(cor(meth, method=cor.method))
     meth = t(meth)
 
     mod = model.matrix(formula, covs)
@@ -566,14 +573,15 @@ cprint = function(...) write(..., stdout())
 #' @param rho numeric correlation value between 0 and 1
 #' @param n_samples generate data for this many samples
 #' @param n_sites generate data for this many sites (CpGs)
-#' @param mean sent to \code{rnorm}
+#' @param mean vector of length \code{n_samples} added to the generated data.
 #' @param sd sent to \code{rnorm}
 #' @return mat n_samples * n_sites matrix where \code{cor(mat[,1], mat[,2])} is
 #'         on average equal to \code{rho}
 #' @export
 gen.correlated = function(rho, n_samples=100, n_sites=4, mean=0, sd=1){
-    X = matrix(rnorm(n_samples * n_sites, mean=mean, sd=sd), nrow=n_samples)
-    make.correlated(rho, X)
+    X = matrix(rnorm(n_samples * n_sites, mean=0, sd=sd), nrow=n_samples)
+    X = make.correlated(rho, X)
+    sweep(X, 1, mean, "+")
 }
 
 #' make existing data correlated

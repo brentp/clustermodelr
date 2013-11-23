@@ -12,7 +12,8 @@
 
   \item{n_sites}{generate data for this many sites (CpGs)}
 
-  \item{mean}{sent to \code{rnorm}}
+  \item{mean}{vector of length \code{n_samples} added to
+  the generated data.}
 
   \item{sd}{sent to \code{rnorm}}
 }
