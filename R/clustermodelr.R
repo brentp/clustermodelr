@@ -77,11 +77,8 @@ stouffer_liptak = function(pvalues, sigma){
     qvalues = qnorm(pvalues, mean=0, sd=1, lower.tail=TRUE)
     C = try(chol(sigma), silent=TRUE)
     if(inherits(C, "try-error")){ 
-        # lower elements.
-        sigma[row(sigma) != col(sigma)] = sigma[row(sigma) != col(sigma)] * 0.999
-        C = chol(sigma)
-    } 
-
+        C = chol(sigma, pivot=TRUE)
+    }
     Cm1 = solve(C) # C^-1
     qvalues = Cm1 %*% qvalues # Qstar = C^-1 * Q
     Cp = sum(qvalues) / sqrt(length(qvalues))
