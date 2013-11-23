@@ -74,9 +74,11 @@ lmr = function(covs, methylation, formula){
 #' @return combined p-value
 #' @export
 stouffer_liptak = function(pvalues, sigma){
+    stopifnot(length(pvalues) == nrow(sigma))
     qvalues = qnorm(pvalues, mean=0, sd=1, lower.tail=TRUE)
     C = try(chol(sigma), silent=TRUE)
-    if(inherits(C, "try-error")){ 
+    if(inherits(C, "try-error")){
+        sigma[row(sigma) != col(sigma)] = sigma[row(sigma) != col(sigma)] * 0.999
         C = chol(sigma, pivot=TRUE)
     }
     Cm1 = solve(C) # C^-1
@@ -104,6 +106,7 @@ stouffer_liptakr = function(covs, meth, formula, cor.method="spearman"){
     library(limma)
     covs$methylation = 1 # 
     sigma = abs(cor(meth, method=cor.method))
+    stopifnot(nrow(sigma) == ncol(meth))
     meth = t(meth)
 
     mod = model.matrix(formula, covs)
@@ -111,10 +114,10 @@ stouffer_liptakr = function(covs, meth, formula, cor.method="spearman"){
 
     fit = eBayes(lmFit(meth, mod))
     beta.orig = coefficients(fit)[,covariate]
-    pvals = topTable(fit, coef=covariate)[,"P.Value"]
+    pvals = topTable(fit, coef=covariate, n=Inf)[,"P.Value"]
     beta.ave = sum(beta.orig) / length(beta.orig)
-
     p = stouffer_liptak(pvals, sigma)
+
     return(list(covariate=covariate, p=p, coef=beta.ave))
 }
 
