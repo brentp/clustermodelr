@@ -114,7 +114,7 @@ stouffer_liptakr = function(covs, meth, formula, cor.method="spearman"){
 
     fit = eBayes(lmFit(meth, mod))
     beta.orig = coefficients(fit)[,covariate]
-    pvals = topTable(fit, coef=covariate, n=Inf)[,"P.Value"]
+    pvals = topTable(fit, coef=covariate, number=Inf)[,"P.Value"]
     beta.ave = sum(beta.orig) / length(beta.orig)
     p = stouffer_liptak(pvals, sigma)
 
