@@ -222,7 +222,6 @@ bumpingr = function(covs, meth, formula, n_sims=100, mc.cores=1){
         covs = covs[keep,]
     }
 
-    message(paste(dim(mod), collapse=", "))
     covariate = colnames(mod)[1 + as.integer(colnames(mod)[1] == "(Intercept)")]
     mod0 = mod[,!colnames(mod) == covariate, drop=FALSE]
     if((!ncol(meth) == nrow(covs)) && nrow(meth) == nrow(covs)){
