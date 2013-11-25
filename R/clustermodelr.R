@@ -132,7 +132,7 @@ stouffer_liptakr = function(covs, meth, formula, cor.method="spearman"){
 #'         of the first term on the RHS of the model.
 stouffer_liptakr.missing = function(covs, meth, formula, cor.method="spearman"){
     res = lapply(1:ncol(meth), function(icol){
-        lmr(covs, meth[,icol], methylation ~ case)
+        lmr(covs, meth[,icol], formula)
     })  
     pvals = unlist(lapply(1:length(res), function(i){ res[[i]]$p }))
     sigma = cor(meth, use="pairwise.complete.obs")
