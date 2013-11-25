@@ -100,9 +100,8 @@ stouffer_liptak = function(pvalues, sigma){
 #'         of the first term on the RHS of the model.
 #' @export
 stouffer_liptakr = function(covs, meth, formula, cor.method="spearman"){
-    # TODO: what if missing data in covariates.
-    # set up another method that runs each in lm() and pulls the coefficents
-    # and pvalues
+    # if there is missing data, have to send to another function.
+    if(any(is.na(meth))){ return stouffer_liptakr.missing(covs, meth, formula, cor.method) }
     library(limma)
     covs$methylation = 1 # 
     sigma = abs(cor(meth, method=cor.method))
@@ -120,6 +119,28 @@ stouffer_liptakr = function(covs, meth, formula, cor.method="spearman"){
 
     return(list(covariate=covariate, p=p, coef=beta.ave))
 }
+
+#' Run lm on each column in a cluster and combine p-values with the 
+#' Stouffer-Liptak method. Missing data OK.
+#' 
+#' @param covs covariate data.frame containing the terms in formula
+#'        except "methylation" which is added automatically
+#' @param meth a matrix of correlated data.
+#' @param formula an R formula containing "methylation"
+#' @param cor.method either "spearman" or "pearson"
+#' @return \code{list(covariate, p, coef)} where p and coef are for the coefficient
+#'         of the first term on the RHS of the model.
+stouffer_liptakr.missing = function(covs, meth, formula, cor.method="spearman"){
+    res = lapply(1:ncol(meth), function(icol){
+        lmr(covs, meth[,icol], methylation ~ case)
+    })  
+    pvals = unlist(lapply(1:length(res), function(i){ res[[i]]$p }))
+    sigma = cor(meth, use="pairwise.complete.obs")
+    combined.p = stouffer_liptak(pvals, sigma)
+    coef = mean(unlist(lapply(1:length(res), function(i){ res[[i]]$coef })))
+    list(covariate=res[[1]]$covariate, p=combined.p, coef=coef)
+}   
+
 
 # for bumping
 permute.residuals = function(mat, mod, mod0, iterations=100, p_samples=1, mc.cores=10){
