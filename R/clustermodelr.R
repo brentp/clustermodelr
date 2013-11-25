@@ -211,11 +211,25 @@ bumpingr = function(covs, meth, formula, n_sims=100, mc.cores=1){
     suppressPackageStartupMessages(library("limma", quietly=TRUE))
     covs$methylation = 1 # for formula => model.matrix
 
+    if(is.null(rownames(covs))) rownames(covs) = 1:nrow(covs)
     mod = model.matrix(formula, covs)
+
+    # remove rows where any of the covariates are not complete.
+    # because the otherwise mod and meth dont have corresponding shapes.
+    keep = NULL
+    if(!nrow(mod) == ncol(covs)){
+        keep = rownames(covs) %in% rownames(mod)
+        covs = covs[keep,]
+    }
+
+    message(paste(dim(mod), collapse=", "))
     covariate = colnames(mod)[1 + as.integer(colnames(mod)[1] == "(Intercept)")]
     mod0 = mod[,!colnames(mod) == covariate, drop=FALSE]
     if((!ncol(meth) == nrow(covs)) && nrow(meth) == nrow(covs)){
         meth = t(meth)
+    }
+    if(!is.null(keep)){
+        meth = meth[,keep]
     }
 
     sim_beta_sums = permute.residuals(meth, mod, mod0, iterations=n_sims, 
