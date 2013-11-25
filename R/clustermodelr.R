@@ -100,15 +100,17 @@ stouffer_liptak = function(pvalues, sigma){
 #'         of the first term on the RHS of the model.
 #' @export
 stouffer_liptakr = function(covs, meth, formula, cor.method="spearman"){
+    covs$methylation = 1 #
+    mod = model.matrix(formula, covs)
     # if there is missing data, have to send to another function.
-    if(any(is.na(meth))){ return(stouffer_liptakr.missing(covs, meth, formula, cor.method)) }
+    if(any(is.na(meth)) | nrow(mod) != nrow(covs)){
+        return(stouffer_liptakr.missing(covs, meth, formula, cor.method))
+    }
     library(limma)
-    covs$methylation = 1 # 
     sigma = abs(cor(meth, method=cor.method))
     stopifnot(nrow(sigma) == ncol(meth))
     meth = t(meth)
 
-    mod = model.matrix(formula, covs)
     covariate = colnames(mod)[1 + as.integer(colnames(mod)[1] == "(Intercept)")]
 
     fit = eBayes(lmFit(meth, mod))
