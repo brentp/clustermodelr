@@ -39,7 +39,7 @@
 
 
 
-suppressPackageStartupMessages(library(limma, quietly=TRUE))
+suppressPackageStartupMessages(library("limma", quietly=TRUE))
 
 
 #' Run lm on a single site
@@ -101,7 +101,7 @@ stouffer_liptak = function(pvalues, sigma){
 #' @export
 stouffer_liptakr = function(covs, meth, formula, cor.method="spearman"){
     # if there is missing data, have to send to another function.
-    if(any(is.na(meth))){ return stouffer_liptakr.missing(covs, meth, formula, cor.method) }
+    if(any(is.na(meth))){ return(stouffer_liptakr.missing(covs, meth, formula, cor.method)) }
     library(limma)
     covs$methylation = 1 # 
     sigma = abs(cor(meth, method=cor.method))
@@ -113,7 +113,7 @@ stouffer_liptakr = function(covs, meth, formula, cor.method="spearman"){
 
     fit = eBayes(lmFit(meth, mod))
     beta.orig = coefficients(fit)[,covariate]
-    pvals = topTable(fit, coef=covariate, n=Inf)[,"P.Value"]
+    pvals = topTable(fit, coef=covariate, number=Inf)[,"P.Value"]
     beta.ave = sum(beta.orig) / length(beta.orig)
     p = stouffer_liptak(pvals, sigma)
 
@@ -206,6 +206,7 @@ sum.lowess = function(icoefs, weights, span=0.2){
 #' @export
 bumpingr = function(covs, meth, formula, n_sims=100, mc.cores=1){
     suppressPackageStartupMessages(library('parallel', quietly=TRUE))
+    suppressPackageStartupMessages(library("limma", quietly=TRUE))
     covs$methylation = 1 # for formula => model.matrix
 
     mod = model.matrix(formula, covs)
@@ -503,7 +504,7 @@ if(FALSE){
 #' @param fname the file name of the Xpression dataset to read.
 #' @export
 readX = function(fname){
-    X = as.matrix(read.delim(gzfile(fname), row.names=1))
+    X = data.matrix(read.delim(gzfile(fname), row.names=1, stringsAsFactors=FALSE, quote=""))
     rownames(X) = gsub("-|:| ", ".", as.character(rownames(X)), perl=TRUE)
     X
 } 
@@ -551,7 +552,7 @@ mclust.lm.X = function(covs, meth, formula, X, gee.corstr=NULL, ..., mc.cores=4)
 
     # if calling repeatedly, should be subsets of the expression matrix that are close to
     # (presumably) the methylation matrix being tested.
-    if(is.character(X)){
+    if(!is.matrix(X)){
         X = readX(X)
     }
 
@@ -576,7 +577,11 @@ mclust.lm.X = function(covs, meth, formula, X, gee.corstr=NULL, ..., mc.cores=4)
         covs2 = covs # make a copy so we dont end up with huge covs
         # add the expression column to the dataframe.
         covs2[,rnames[irow]] = X.row
-        sformula = sprintf("%s ~ %s + %s", lhs, rnames[irow], rhs)
+        if(rhs == "1"){ # methylation ~ 1 => methylation ~ probe
+            sformula = sprintf("%s ~ %s", lhs, rnames[irow])
+        } else {
+            sformula = sprintf("%s ~ %s + %s", lhs, rnames[irow], rhs)
+        }
         # call with 1 core since we're already parallel here.
         res = mclust.lm(covs2, meth, as.formula(sformula),
                            gee.corstr=gee.corstr, ..., mc.cores=1)

@@ -27,6 +27,26 @@ test_that("can run models", {
 })
 
 
+test_that("can run models on sparse data", {
+    formula = methylation ~ case
+    cases = gen.correlated(0.23, 20, 4, mean=0.05, sd=0.035)
+    controls = gen.correlated(0.23, 20, 4, mean=0.0, sd=0.035)
+    meth = rbind(cases, controls)
+    colnames(meth) = paste0("probe_", 1:4)
+    meth[33, 2] = NaN
+    meth[11, 4] = NaN
+
+    covs = data.frame(case=c(rep(1, 20), rep(0, 20)))
+    rownames(meth) = rownames(covs) = paste0("sample_", 1:40)
+    res = clust.lm(covs, meth, formula, liptak=TRUE)
+    expect_true(!is.na(res$p))
+    res = stouffer_liptakr(covs, meth, formula)
+    expect_true(!is.na(res$p))
+    bres = bumpingr(covs, meth, formula)
+    expect_that(bres$coef, equals(res$coef))
+
+})
+
 
 cprint = function(...) write(..., stdout())
 
