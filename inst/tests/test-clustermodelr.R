@@ -18,7 +18,7 @@ test_that("can run single column", {
 test_that("can run models", {
     formula = methylation ~ disease
     expect_that(length(clust.lm(covs, meth, formula, liptak=TRUE)), equals(3))
-    expect_that(length(clust.lm(covs, meth, formula, bumping=TRUE)), equals(3))
+    expect_that(length(bumpingr(covs, meth, formula, n_sims=3)), equals(3))
     expect_that(length(clust.lm(covs, meth, formula, gee.idvar="id", gee.corstr="ar")), equals(3))
     expect_that(length(clust.lm(covs, meth, disease ~ 1, skat=TRUE)), equals(3))
     formula = methylation ~ disease + (1|id) + (1|CpG)
@@ -29,8 +29,8 @@ test_that("can run models", {
 
 test_that("can run models on sparse data", {
     formula = methylation ~ case
-    cases = gen.correlated(0.23, 20, 4, mean=0.05, sd=0.035)
-    controls = gen.correlated(0.23, 20, 4, mean=0.0, sd=0.035)
+    cases = gen.correlated(0.23, 20, 4, mean=0.01, sd=0.045)
+    controls = gen.correlated(0.23, 20, 4, mean=0.0, sd=0.045)
     meth = rbind(cases, controls)
     colnames(meth) = paste0("probe_", 1:4)
     meth[33, 2] = NaN
