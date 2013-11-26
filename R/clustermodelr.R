@@ -39,7 +39,7 @@
 
 
 
-suppressPackageStartupMessages(library(limma, quietly=TRUE))
+suppressPackageStartupMessages(library("limma", quietly=TRUE))
 
 
 #' Run lm on a single site
@@ -100,16 +100,17 @@ stouffer_liptak = function(pvalues, sigma){
 #'         of the first term on the RHS of the model.
 #' @export
 stouffer_liptakr = function(covs, meth, formula, cor.method="spearman"){
-    # TODO: what if missing data in covariates.
-    # set up another method that runs each in lm() and pulls the coefficents
-    # and pvalues
+    covs$methylation = 1 #
+    mod = model.matrix(formula, covs)
+    # if there is missing data, have to send to another function.
+    if(any(is.na(meth)) | nrow(mod) != nrow(covs)){
+        return(stouffer_liptakr.missing(covs, meth, formula, cor.method))
+    }
     library(limma)
-    covs$methylation = 1 # 
     sigma = abs(cor(meth, method=cor.method))
     stopifnot(nrow(sigma) == ncol(meth))
     meth = t(meth)
 
-    mod = model.matrix(formula, covs)
     covariate = colnames(mod)[1 + as.integer(colnames(mod)[1] == "(Intercept)")]
 
     fit = eBayes(lmFit(meth, mod))
@@ -120,6 +121,28 @@ stouffer_liptakr = function(covs, meth, formula, cor.method="spearman"){
 
     return(list(covariate=covariate, p=p, coef=beta.ave))
 }
+
+#' Run lm on each column in a cluster and combine p-values with the 
+#' Stouffer-Liptak method. Missing data OK.
+#' 
+#' @param covs covariate data.frame containing the terms in formula
+#'        except "methylation" which is added automatically
+#' @param meth a matrix of correlated data.
+#' @param formula an R formula containing "methylation"
+#' @param cor.method either "spearman" or "pearson"
+#' @return \code{list(covariate, p, coef)} where p and coef are for the coefficient
+#'         of the first term on the RHS of the model.
+stouffer_liptakr.missing = function(covs, meth, formula, cor.method="spearman"){
+    res = lapply(1:ncol(meth), function(icol){
+        lmr(covs, meth[,icol], formula)
+    })  
+    pvals = unlist(lapply(1:length(res), function(i){ res[[i]]$p }))
+    sigma = cor(meth, use="pairwise.complete.obs")
+    combined.p = stouffer_liptak(pvals, sigma)
+    coef = mean(unlist(lapply(1:length(res), function(i){ res[[i]]$coef })))
+    list(covariate=res[[1]]$covariate, p=combined.p, coef=coef)
+}   
+
 
 # for bumping
 permute.residuals = function(mat, mod, mod0, iterations=100, p_samples=1, mc.cores=10){
@@ -185,13 +208,27 @@ sum.lowess = function(icoefs, weights, span=0.2){
 #' @export
 bumpingr = function(covs, meth, formula, n_sims=100, mc.cores=1){
     suppressPackageStartupMessages(library('parallel', quietly=TRUE))
+    suppressPackageStartupMessages(library("limma", quietly=TRUE))
     covs$methylation = 1 # for formula => model.matrix
 
+    if(is.null(rownames(covs))) rownames(covs) = 1:nrow(covs)
     mod = model.matrix(formula, covs)
+
+    # remove rows where any of the covariates are not complete.
+    # because the otherwise mod and meth dont have corresponding shapes.
+    keep = NULL
+    if(!nrow(mod) == ncol(covs)){
+        keep = rownames(covs) %in% rownames(mod)
+        covs = covs[keep,]
+    }
+
     covariate = colnames(mod)[1 + as.integer(colnames(mod)[1] == "(Intercept)")]
     mod0 = mod[,!colnames(mod) == covariate, drop=FALSE]
     if((!ncol(meth) == nrow(covs)) && nrow(meth) == nrow(covs)){
         meth = t(meth)
+    }
+    if(!is.null(keep)){
+        meth = meth[,keep]
     }
 
     sim_beta_sums = permute.residuals(meth, mod, mod0, iterations=n_sims, 
@@ -482,7 +519,7 @@ if(FALSE){
 #' @param fname the file name of the Xpression dataset to read.
 #' @export
 readX = function(fname){
-    X = as.matrix(read.delim(gzfile(fname), row.names=1))
+    X = data.matrix(read.delim(gzfile(fname), row.names=1, stringsAsFactors=FALSE, quote=""))
     rownames(X) = gsub("-|:| ", ".", as.character(rownames(X)), perl=TRUE)
     X
 } 
@@ -530,7 +567,7 @@ mclust.lm.X = function(covs, meth, formula, X, gee.corstr=NULL, ..., mc.cores=4)
 
     # if calling repeatedly, should be subsets of the expression matrix that are close to
     # (presumably) the methylation matrix being tested.
-    if(is.character(X)){
+    if(!is.matrix(X)){
         X = readX(X)
     }
 
@@ -555,7 +592,11 @@ mclust.lm.X = function(covs, meth, formula, X, gee.corstr=NULL, ..., mc.cores=4)
         covs2 = covs # make a copy so we dont end up with huge covs
         # add the expression column to the dataframe.
         covs2[,rnames[irow]] = X.row
-        sformula = sprintf("%s ~ %s + %s", lhs, rnames[irow], rhs)
+        if(rhs == "1"){ # methylation ~ 1 => methylation ~ probe
+            sformula = sprintf("%s ~ %s", lhs, rnames[irow])
+        } else {
+            sformula = sprintf("%s ~ %s + %s", lhs, rnames[irow], rhs)
+        }
         # call with 1 core since we're already parallel here.
         res = mclust.lm(covs2, meth, as.formula(sformula),
                            gee.corstr=gee.corstr, ..., mc.cores=1)
