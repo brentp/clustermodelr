@@ -206,7 +206,7 @@ sum.lowess = function(icoefs, weights, span=0.2){
 #' @return \code{list(covariate, p, coef)} where p and coef are for the coefficient
 #'         of the first term on the RHS of the model.
 #' @export
-bumpingr = function(covs, meth, formula, n_sims=100, mc.cores=1){
+bumpingr = function(covs, meth, formula, n_sims=20, mc.cores=1){
     suppressPackageStartupMessages(library('parallel', quietly=TRUE))
     suppressPackageStartupMessages(library("limma", quietly=TRUE))
     covs$methylation = 1 # for formula => model.matrix
@@ -247,9 +247,10 @@ bumpingr = function(covs, meth, formula, n_sims=100, mc.cores=1){
     raw_beta_sum = sum(coefficients(fit)[,covariate])
     ngt = sum(abs(sim_beta_sums) >= abs(beta_sum))
     # progressive monte-carlo: only do lots of sims when it has a low p-value.
-    if(ngt < 4 & n_sims == 100) return(bumpingr(covs, meth, formula, 2000))
-    if(ngt < 10 & n_sims == 2000) return(bumpingr(covs, meth, formula, 5000))
-    if(ngt < 10 & n_sims == 5000) return(bumpingr(covs, meth, formula, 15000))
+    if(ngt < 2 & n_sims == 20) return(bumpingr(covs, meth, formula, 100, mc.cores))
+    if(ngt < 4 & n_sims == 100) return(bumpingr(covs, meth, formula, 2000, mc.cores))
+    if(ngt < 10 & n_sims == 2000) return(bumpingr(covs, meth, formula, 5000, max(mc.cores, 2)))
+    if(ngt < 10 & n_sims == 5000) return(bumpingr(covs, meth, formula, 15000, max(mc.cores, 4)))
     pval = (1 + ngt) / (1 + n_sims)
     return(list(covariate=covariate, p=pval, coef=raw_beta_sum / nrow(meth)))
 }

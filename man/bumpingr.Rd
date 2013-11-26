@@ -2,7 +2,7 @@
 \alias{bumpingr}
 \title{Run a local bump-hunting algorithm}
 \usage{
-  bumpingr(covs, meth, formula, n_sims = 100, mc.cores = 1)
+  bumpingr(covs, meth, formula, n_sims = 20, mc.cores = 1)
 }
 \arguments{
   \item{covs}{covariate data.frame containing the terms in
