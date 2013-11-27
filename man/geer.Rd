@@ -3,7 +3,8 @@
 \title{Use Generalized Estimating Equations to assign significance to a cluster
 of data.}
 \usage{
-  geer(covs, formula, idvar = "CpG", corstr = "ex")
+  geer(covs, formula, idvar = "CpG", corstr = "ex",
+    counts = FALSE)
 }
 \arguments{
   \item{covs}{covariate data.frame containing the terms in
@@ -15,6 +16,8 @@ of data.}
   \item{idvar}{idvar sent to \code{geepack::geeglm}}
 
   \item{corstr}{the corstr sent to \code{geepack::geeglm}}
+
+  \item{counts}{if TRUE, then the poisson family is used.}
 }
 \value{
   \code{list(covariate, p, coef)} where p and coef are for

@@ -3,8 +3,8 @@
 \title{dispatch to one of the implemented cluster methods}
 \usage{
   clust.lm(covs, meth, formula, gee.corstr = NULL,
-    gee.idvar = NULL, bumping = FALSE, liptak = FALSE,
-    skat = FALSE)
+    gee.idvar = NULL, counts = FALSE, bumping = FALSE,
+    liptak = FALSE, skat = FALSE)
 }
 \arguments{
   \item{covs}{covariate data.frame containing the terms in
@@ -20,6 +20,9 @@
 
   \item{gee.idvar}{if specified, the cluster variable to
   geeglm}
+
+  \item{counts}{if specified, then use poisson or NB where
+  available}
 
   \item{bumping}{if true then the bumping algorithm is
   used.}

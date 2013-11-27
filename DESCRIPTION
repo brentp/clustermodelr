@@ -21,6 +21,7 @@ Imports:
     data.table
 Collate:
     'clustermodelr.R'
+    'combine.R'
 Suggests:
     testthat,
     lme4,

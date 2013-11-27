@@ -62,32 +62,6 @@ lmr = function(covs, methylation, formula){
     list(covariate=covariate, p=row[['Pr(>|t|)']], coef=row[['Estimate']])
 }
 
-#' Perform the stouffer-liptak correction on a set of correlated pvalues
-#'
-#' Accepts a list of p-values and a correlation matrix and returns a
-#' single p-value that combines the p-values accounting for their
-#' correlation. Note that if \code{sigma} is  not positive-definitive,
-#' then off diagonal elements will be multiplied by 0.9999.
-#'
-#' @param pvalues a vector of pvalues
-#' @param sigma a matrix of shape \code{nrow=ncol=length(pvalues)}
-#' @return combined p-value
-#' @export
-stouffer_liptak = function(pvalues, sigma){
-    stopifnot(length(pvalues) == nrow(sigma))
-    qvalues = qnorm(pvalues, mean=0, sd=1, lower.tail=TRUE)
-    C = try(chol(sigma), silent=TRUE)
-    if(inherits(C, "try-error")){
-        sigma[row(sigma) != col(sigma)] = sigma[row(sigma) != col(sigma)] * 0.999
-        C = chol(sigma, pivot=TRUE)
-    }
-    Cm1 = solve(C) # C^-1
-    qvalues = Cm1 %*% qvalues # Qstar = C^-1 * Q
-    Cp = sum(qvalues) / sqrt(length(qvalues))
-    pnorm(Cp, mean=0, sd=1, lower.tail=TRUE)
-}
-
-
 #' Run lm on each column in a cluster and combine p-values with the 
 #' Stouffer-Liptak method
 #' 
@@ -117,7 +91,7 @@ stouffer_liptakr = function(covs, meth, formula, cor.method="spearman"){
     beta.orig = coefficients(fit)[,covariate]
     pvals = topTable(fit, coef=covariate, number=Inf)[,"P.Value"]
     beta.ave = sum(beta.orig) / length(beta.orig)
-    p = stouffer_liptak(pvals, sigma)
+    p = stouffer_liptak.combine(pvals, sigma)
     return(list(covariate=covariate, p=p, coef=beta.ave))
 }
 
@@ -137,7 +111,7 @@ stouffer_liptakr.missing = function(covs, meth, formula, cor.method="spearman"){
     })  
     pvals = unlist(lapply(1:length(res), function(i){ res[[i]]$p }))
     sigma = cor(meth, use="pairwise.complete.obs")
-    combined.p = stouffer_liptak(pvals, sigma)
+    combined.p = stouffer_liptak.combine(pvals, sigma)
     coef = mean(unlist(lapply(1:length(res), function(i){ res[[i]]$coef })))
     list(covariate=res[[1]]$covariate, p=combined.p, coef=coef)
 }   
@@ -515,6 +489,7 @@ mclust.lm = function(covs, meths, formula, gee.corstr=NULL, ..., mc.cores=4){
             res$cluster_id = cs
             return(res)
         }
+
         return(list(covariate=NA, p=NaN, coef=NaN, cluster_id=cs))
     }, mc.cores=mc.cores)
     results = rbindlist(results)

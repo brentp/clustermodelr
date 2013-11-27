@@ -1,8 +1,8 @@
-\name{stouffer_liptak}
-\alias{stouffer_liptak}
-\title{Perform the stouffer-liptak correction on a set of correlated pvalues}
+\name{zscore.combine}
+\alias{zscore.combine}
+\title{Combine p-values by the z-score correction.}
 \usage{
-  stouffer_liptak(pvalues, sigma)
+  zscore.combine(pvalues, sigma)
 }
 \arguments{
   \item{pvalues}{a vector of pvalues}
