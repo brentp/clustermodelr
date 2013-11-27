@@ -7,9 +7,10 @@
 #'            available from \code{geepack}. \code{\link{geer}}}
 #' \item{mixed-effect model:}{Mixed effect model in \link[lme4]{lme4} syntax
 #'                           \code{\link{mixed_modelr}}}
-#' \item{Liptak:}{Calculates the p-value for each entry in the cluster then
-#'                combines the p-values adjusting for correlation.
-#'                \code{\link{stouffer_liptakr}}}
+#' \item{combiner:}{Calculates the p-value for each entry in the cluster then
+#'                combines the p-values adjusting for correlation with either
+#'                \code{\link{stouffer_liptak.combine}} or
+#'                \code{\link{zscore.combine}}}
 #' \item{bumping:}{something like bump-hunting but takes a putative "bump" and
 #'                repeatedly compares coefficients of estimated covariates to the observed
 #'                to assign significance. \code{\link{bumpingr}}}
@@ -63,22 +64,25 @@ lmr = function(covs, methylation, formula){
 }
 
 #' Run lm on each column in a cluster and combine p-values with the 
-#' Stouffer-Liptak method
+#' either stouffer-liptak or zscore method.
 #' 
 #' @param covs covariate data.frame containing the terms in formula
 #'        except "methylation" which is added automatically
 #' @param meth a matrix of correlated data.
 #' @param formula an R formula containing "methylation"
 #' @param cor.method either "spearman" or "pearson"
+#' @param combine.fn a function that takes a list of p-values and
+#'        a correlation matrix and returns a combined p-value
 #' @return \code{list(covariate, p, coef)} where p and coef are for the coefficient
 #'         of the first term on the RHS of the model.
 #' @export
-stouffer_liptakr = function(covs, meth, formula, cor.method="spearman"){
+combiner = function(covs, meth, formula, cor.method="spearman",
+                            combine.fn=stouffer_liptak.combine){
     covs$methylation = 1 #
     mod = model.matrix(formula, covs)
     # if there is missing data, have to send to another function.
     if(any(is.na(meth)) | nrow(mod) != nrow(covs)){
-        return(stouffer_liptakr.missing(covs, meth, formula, cor.method))
+        return(combiner.missing(covs, meth, formula, cor.method, combine.fn))
     }
     library(limma)
     sigma = abs(cor(meth, method=cor.method))
@@ -91,12 +95,12 @@ stouffer_liptakr = function(covs, meth, formula, cor.method="spearman"){
     beta.orig = coefficients(fit)[,covariate]
     pvals = topTable(fit, coef=covariate, number=Inf)[,"P.Value"]
     beta.ave = sum(beta.orig) / length(beta.orig)
-    p = stouffer_liptak.combine(pvals, sigma)
+    p = combine.fn(pvals, sigma)
     return(list(covariate=covariate, p=p, coef=beta.ave))
 }
 
 #' Run lm on each column in a cluster and combine p-values with the 
-#' Stouffer-Liptak method. Missing data OK.
+#' Stouffer-Liptak method or the z-score method. Missing data OK.
 #' 
 #' @param covs covariate data.frame containing the terms in formula
 #'        except "methylation" which is added automatically
@@ -105,13 +109,14 @@ stouffer_liptakr = function(covs, meth, formula, cor.method="spearman"){
 #' @param cor.method either "spearman" or "pearson"
 #' @return \code{list(covariate, p, coef)} where p and coef are for the coefficient
 #'         of the first term on the RHS of the model.
-stouffer_liptakr.missing = function(covs, meth, formula, cor.method="spearman"){
+combiner.missing = function(covs, meth, formula, cor.method="spearman",
+            combine.fn=stouffer_liptak.combine){
     res = lapply(1:ncol(meth), function(icol){
         lmr(covs, meth[,icol], formula)
     })  
     pvals = unlist(lapply(1:length(res), function(i){ res[[i]]$p }))
     sigma = cor(meth, use="pairwise.complete.obs")
-    combined.p = stouffer_liptak.combine(pvals, sigma)
+    combined.p = combine.fn(pvals, sigma)
     coef = mean(unlist(lapply(1:length(res), function(i){ res[[i]]$coef })))
     list(covariate=res[[1]]$covariate, p=combined.p, coef=coef)
 }   
@@ -377,8 +382,8 @@ expand.covs = function(covs, meth){
 #' @param gee.idvar if specified, the cluster variable to geeglm
 #' @param counts if specified, then use poisson or NB where available
 #' @param bumping if true then the bumping algorithm is used.
-#' @param liptak if true then run the model on each probe in \code{meth}
-#'        and perform the stouffer-liptak correction on the p-values
+#' @param combine either "liptak" or "z-score" used to get a single p-value
+#'        after running a test on each probe.
 #' @param skat use the SKAT method to test associated. In this case, the
 #'        model will look like: \code{disease ~ 1} and it will be tested
 #'        against the methylation matrix
@@ -386,9 +391,10 @@ expand.covs = function(covs, meth){
 clust.lm = function(covs, meth, formula,
                     gee.corstr=NULL, gee.idvar=NULL,
                     counts=FALSE,
-                    bumping=FALSE, liptak=FALSE, skat=FALSE){
+                    bumping=FALSE, combine=c(NA, "liptak", "z-score"), skat=FALSE){
 
     formula = as.formula(formula)
+    combine = match.arg(combine)
 
     if(ncol(meth) == 1 || is.vector(meth)){
         # just got one column, so we force it to use a linear model
@@ -408,8 +414,12 @@ clust.lm = function(covs, meth, formula,
     if(skat){ # wide
         return(skatr(covs, meth, formula))
     }
-    if(liptak){ # wide
-        return(stouffer_liptakr(covs, meth, formula))
+    if(!is.na(combine)){ # wide
+        if(combine == "liptak"){
+            return(combiner(covs, meth, formula, combine.fn=stouffer_liptak.combine))
+        } 
+        stopifnot(combine == "z-score")
+        return(combiner(covs, meth, formula, combine.fn=zscore.combine))
     }
 
     ###########################################

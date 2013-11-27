@@ -1,10 +1,10 @@
-\name{stouffer_liptakr.missing}
-\alias{stouffer_liptakr.missing}
+\name{combiner}
+\alias{combiner}
 \title{Run lm on each column in a cluster and combine p-values with the
-Stouffer-Liptak method. Missing data OK.}
+either stouffer-liptak or zscore method.}
 \usage{
-  stouffer_liptakr.missing(covs, meth, formula,
-    cor.method = "spearman")
+  combiner(covs, meth, formula, cor.method = "spearman",
+    combine.fn = stouffer_liptak.combine)
 }
 \arguments{
   \item{covs}{covariate data.frame containing the terms in
@@ -16,6 +16,10 @@ Stouffer-Liptak method. Missing data OK.}
   \item{formula}{an R formula containing "methylation"}
 
   \item{cor.method}{either "spearman" or "pearson"}
+
+  \item{combine.fn}{a function that takes a list of
+  p-values and a correlation matrix and returns a combined
+  p-value}
 }
 \value{
   \code{list(covariate, p, coef)} where p and coef are for
@@ -24,6 +28,6 @@ Stouffer-Liptak method. Missing data OK.}
 }
 \description{
   Run lm on each column in a cluster and combine p-values
-  with the Stouffer-Liptak method. Missing data OK.
+  with the either stouffer-liptak or zscore method.
 }
 

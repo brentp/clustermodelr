@@ -17,10 +17,12 @@ test_that("can run single column", {
 
 test_that("can run models", {
     formula = methylation ~ disease
-    expect_that(length(clust.lm(covs, meth, formula, liptak=TRUE)), equals(3))
+    expect_that(length(clust.lm(covs, meth, formula, combine="liptak")), equals(3))
+    expect_that(length(clust.lm(covs, meth, formula, combine="z-score")), equals(3))
     expect_that(length(bumpingr(covs, meth, formula, n_sims=3)), equals(3))
     expect_that(length(clust.lm(covs, meth, formula, gee.idvar="id", gee.corstr="ar")), equals(3))
     expect_that(length(clust.lm(covs, meth, disease ~ 1, skat=TRUE)), equals(3))
+
     formula = methylation ~ disease + (1|id) + (1|CpG)
     expect_that(length(clust.lm(covs, meth, formula)), equals(3))
 
@@ -38,12 +40,15 @@ test_that("can run models on sparse data", {
 
     covs = data.frame(case=c(rep(1, 20), rep(0, 20)))
     rownames(meth) = rownames(covs) = paste0("sample_", 1:40)
-    res = clust.lm(covs, meth, formula, liptak=TRUE)
+    res = clust.lm(covs, meth, formula, combine="liptak")
     expect_true(!is.na(res$p))
-    res = stouffer_liptakr(covs, meth, formula)
+    res = combiner(covs, meth, formula)
     expect_true(!is.na(res$p))
     bres = bumpingr(covs, meth, formula)
     expect_that(bres$coef, equals(res$coef))
+
+    res = combiner(covs, meth, formula, combine.fn=zscore.combine)
+    expect_true(!is.na(res$p))
 
 })
 
@@ -74,7 +79,7 @@ test_X = function(){
 
     cprint("\nliptak")
     formula = methylation ~ disease #+ (1|id) + (1|CpG)
-    dfl = mclust.lm.X(covs, meth, formula, X, testing=TRUE, liptak=TRUE)
+    dfl = mclust.lm.X(covs, meth, formula, X, testing=TRUE, combine="liptak")
     print(head(dfl[order(dfl$p),], n=5))
     print(dfl[dfl$covariate == "A_33_P3403576",])
 

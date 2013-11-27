@@ -10,10 +10,11 @@
   with all correlation structures available from
   \code{geepack}. \code{\link{geer}}} \item{mixed-effect
   model:}{Mixed effect model in \link[lme4]{lme4} syntax
-  \code{\link{mixed_modelr}}} \item{Liptak:}{Calculates the
-  p-value for each entry in the cluster then combines the
-  p-values adjusting for correlation.
-  \code{\link{stouffer_liptakr}}} \item{bumping:}{something
+  \code{\link{mixed_modelr}}} \item{combiner:}{Calculates
+  the p-value for each entry in the cluster then combines
+  the p-values adjusting for correlation with either
+  \code{\link{stouffer_liptak.combine}} or
+  \code{\link{zscore.combine}}} \item{bumping:}{something
   like bump-hunting but takes a putative "bump" and
   repeatedly compares coefficients of estimated covariates
   to the observed to assign significance.

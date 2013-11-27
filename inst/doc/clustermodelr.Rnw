@@ -61,7 +61,7 @@ will be returned for that covariate.
 
 \subsubsection*{Stouffer Liptak}
 <<liptak>>=
-stouffer_liptakr(covs, meth, methylation ~ case)
+combiner(covs, meth, methylation ~ case)
 @
 This utilizes the information across the 4 probes to determine the significance and
 size of the association. Here we see that the p-value is quite low, especially when compared with the value from the single-probe t-test.

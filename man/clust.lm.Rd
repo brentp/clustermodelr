@@ -4,7 +4,7 @@
 \usage{
   clust.lm(covs, meth, formula, gee.corstr = NULL,
     gee.idvar = NULL, counts = FALSE, bumping = FALSE,
-    liptak = FALSE, skat = FALSE)
+    combine = c(NA, "liptak", "z-score"), skat = FALSE)
 }
 \arguments{
   \item{covs}{covariate data.frame containing the terms in
@@ -27,9 +27,8 @@
   \item{bumping}{if true then the bumping algorithm is
   used.}
 
-  \item{liptak}{if true then run the model on each probe in
-  \code{meth} and perform the stouffer-liptak correction on
-  the p-values}
+  \item{combine}{either "liptak" or "z-score" used to get a
+  single p-value after running a test on each probe.}
 
   \item{skat}{use the SKAT method to test associated. In
   this case, the model will look like: \code{disease ~ 1}
