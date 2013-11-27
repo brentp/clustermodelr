@@ -118,7 +118,6 @@ stouffer_liptakr = function(covs, meth, formula, cor.method="spearman"){
     pvals = topTable(fit, coef=covariate, number=Inf)[,"P.Value"]
     beta.ave = sum(beta.orig) / length(beta.orig)
     p = stouffer_liptak(pvals, sigma)
-
     return(list(covariate=covariate, p=p, coef=beta.ave))
 }
 
@@ -250,9 +249,33 @@ bumpingr = function(covs, meth, formula, n_sims=20, mc.cores=1){
     if(ngt < 2 & n_sims == 20) return(bumpingr(covs, meth, formula, 100, mc.cores))
     if(ngt < 4 & n_sims == 100) return(bumpingr(covs, meth, formula, 2000, mc.cores))
     if(ngt < 10 & n_sims == 2000) return(bumpingr(covs, meth, formula, 5000, max(mc.cores, 2)))
-    if(ngt < 10 & n_sims == 5000) return(bumpingr(covs, meth, formula, 15000, max(mc.cores, 4)))
+    if(ngt < 10 & n_sims == 5000) return(bumpingr(covs, meth, formula, 15000, max(mc.cores, 2)))
     pval = (1 + ngt) / (1 + n_sims)
     return(list(covariate=covariate, p=pval, coef=raw_beta_sum / nrow(meth)))
+}
+
+
+#' Fit a mixed effect model with lme4 syntax on count data using glmer.nb on
+#' count data.
+#'
+#' @param covs covariate data.frame containing the terms in formula
+#'        except "methylation" which is added automatically
+#' @param formula an R formula containing "methylation"
+#' @return \code{list(covariate, p, coef)} where p and coef are for the coefficient
+#'         of the first term on the RHS of the model.
+#' @export
+nb.mixed.count = function(covs, formula){
+    w = options("warn")$warn
+    e = options("error")$error
+    options(warn=0, error=NULL)
+    suppressPackageStartupMessages(library('lme4', quietly=TRUE))
+    #s = summary(glmer(formula, covs, family="poisson"))$coefficients
+    s = summary(glmer.nb(formula, covs))$coefficients
+    options(warn=w, error=e)
+    covariate = paste0(rownames(s)[2], ".nb")
+    row = s[2,]
+    coef = row[['Estimate']] # invert via ppois?
+    list(covariate=covariate, p=row[['Pr(>|z|)']], coef=coef)
 }
 
 #' Use Generalized Estimating Equations to assign significance to a cluster
@@ -263,10 +286,11 @@ bumpingr = function(covs, meth, formula, n_sims=20, mc.cores=1){
 #' @param formula an R formula containing "methylation"
 #' @param idvar idvar sent to \code{geepack::geeglm}
 #' @param corstr the corstr sent to \code{geepack::geeglm}
+#' @param counts if TRUE, then the poisson family is used.
 #' @return \code{list(covariate, p, coef)} where p and coef are for the coefficient
 #'         of the first term on the RHS of the model.
 #' @export
-geer = function(covs, formula, idvar="CpG", corstr="ex"){
+geer = function(covs, formula, idvar="CpG", corstr="ex", counts=FALSE){
     # assume it's already sorted by CpG, then by id.
     if(idvar != "CpG" && corstr == "ar"){
         covs = covs[order(covs[,idvar], covs$CpG),]
@@ -278,10 +302,11 @@ geer = function(covs, formula, idvar="CpG", corstr="ex"){
     # R CRAN has to make sure clustervar exists.
     clustervar = covs$clustervar = covs[,idvar]
     # can't do logistc with idvar of id, gives bad results for some reason
-    s = summary(geeglm(formula, id=clustervar, data=covs, corstr=corstr))
-    mm = model.matrix(formula, covs)
-    covariate = colnames(mm)[1 + as.integer(colnames(mm)[1] == "(Intercept)")]
-    row = s$coefficients[covariate,]
+    s = summary(geeglm(formula, id=clustervar, data=covs, corstr=corstr,
+                       family=ifelse(counts, "poisson", "gaussian")))$coefficients
+    covariate = rownames(s)[2]
+    row = s[covariate,]
+    if(counts) covariate=paste0(covariate, ".poisson")
     return(list(covariate=covariate, p=row[['Pr(>|W|)']], coef=row[['Estimate']]))
 }
 
@@ -376,6 +401,7 @@ expand.covs = function(covs, meth){
 #' @param gee.corstr if specified, the the corstr arg to geeglm.
 #'        gee.idvar must also be specified.
 #' @param gee.idvar if specified, the cluster variable to geeglm
+#' @param counts if specified, then use poisson or NB where available
 #' @param bumping if true then the bumping algorithm is used.
 #' @param liptak if true then run the model on each probe in \code{meth}
 #'        and perform the stouffer-liptak correction on the p-values
@@ -385,6 +411,7 @@ expand.covs = function(covs, meth){
 #' @export
 clust.lm = function(covs, meth, formula,
                     gee.corstr=NULL, gee.idvar=NULL,
+                    counts=FALSE,
                     bumping=FALSE, liptak=FALSE, skat=FALSE){
 
     formula = as.formula(formula)
@@ -415,15 +442,19 @@ clust.lm = function(covs, meth, formula,
     # GEE and mixed models require long format.
     ###########################################
     covs = expand.covs(covs, meth) # TODO: make this send just the nrow, ncol
+
     is.mixed.model = any(grepl("|", attr(terms(formula), 'term.labels'), fixed=TRUE))
     # mixed-model
     if (is.null(gee.corstr)){
         stopifnot(is.mixed.model)
+
+        if(counts) return(nb.mixed.count(covs, formula))
+
         return(mixed_modelr(covs, formula))
     # GEE
     } else if (!is.null(gee.corstr)){
         stopifnot(!is.null(gee.idvar))
-        return(geer(covs, formula, idvar=gee.idvar, corstr=gee.corstr))
+        return(geer(covs, formula, idvar=gee.idvar, corstr=gee.corstr, counts=counts))
     # limma
     } else {
         # TODO this goes in the matrix section above and uses
