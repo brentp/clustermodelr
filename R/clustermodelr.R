@@ -222,8 +222,8 @@ bumpingr = function(covs, meth, formula, n_sims=20, mc.cores=1){
     # progressive monte-carlo: only do lots of sims when it has a low p-value.
     if(ngt < 2 & n_sims == 20) return(bumpingr(covs, meth, formula, 100, mc.cores))
     if(ngt < 4 & n_sims == 100) return(bumpingr(covs, meth, formula, 2000, mc.cores))
-    if(ngt < 10 & n_sims == 2000) return(bumpingr(covs, meth, formula, 5000, max(mc.cores, 2)))
-    if(ngt < 10 & n_sims == 5000) return(bumpingr(covs, meth, formula, 15000, max(mc.cores, 2)))
+    if(ngt < 10 & n_sims == 2000) return(bumpingr(covs, meth, formula, 5000, mc.cores))
+    if(ngt < 10 & n_sims == 5000) return(bumpingr(covs, meth, formula, 15000, mc.cores))
     pval = (1 + ngt) / (1 + n_sims)
     return(list(covariate=covariate, p=pval, coef=raw_beta_sum / nrow(meth)))
 }
@@ -347,7 +347,7 @@ skatr = function(covs, meth, formula, r.corr=c(0.00, 0.015, 0.06, 0.15)){
 #' @param meth matrix of methylation with same number of rows as \code{covs}
 #' @export
 expand.covs = function(covs, meth){
-    if(!"id" %in% colnames(covs)) covs$id = 1:nrow(covs)
+    if(!"id" %in% colnames(covs)) covs$id = as.factor(1:nrow(covs))
     n_samples = nrow(covs)
     meth = as.matrix(meth)
     stopifnot(nrow(meth) == n_samples)
@@ -358,7 +358,7 @@ expand.covs = function(covs, meth){
     cpgs = 1:ncol(meth)
     dim(meth) = NULL
     covs$methylation = meth
-    covs$CpG = rep(cpgs, each=n_samples) # 1 1 1, 2 2 2, etc since CpG's are grouped.
+    covs$CpG = as.factor(rep(cpgs, each=n_samples)) # 1 1 1, 2 2 2, etc since CpG's are grouped.
     covs
 }
 
