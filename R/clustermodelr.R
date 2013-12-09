@@ -57,7 +57,7 @@ suppressPackageStartupMessages(library("limma", quietly=TRUE))
 #' @export
 lmr = function(formula, covs, methylation=NULL){
     if(!is.null(methylation)) covs$methylation = methylation
-    s = summary(lm(formula, covs))$coefficients
+    s = summary(lm(formula, covs, weights=covs$weights))$coefficients
     covariate = rownames(s)[2]
     row = s[2,]
     list(covariate=covariate, p=row[['Pr(>|t|)']], coef=row[['Estimate']])
@@ -253,7 +253,7 @@ nb.mixed.count = function(formula, covs){
     options(warn=0, error=NULL)
     suppressPackageStartupMessages(library('lme4', quietly=TRUE))
     #s = summary(glmer(formula, covs, family="poisson"))$coefficients
-    s = summary(glmer.nb(formula, covs))$coefficients
+    s = summary(glmer.nb(formula, covs, weights=covs$weights))$coefficients
     options(warn=w, error=e)
     covariate = paste0(rownames(s)[2], ".nb")
     row = s[2,]
@@ -286,7 +286,8 @@ geer = function(formula, covs, idvar="CpG", corstr="ex", counts=FALSE){
     clustervar = covs$clustervar = covs[,idvar]
     # can't do logistc with idvar of id, gives bad results for some reason
     s = summary(geeglm(formula, id=clustervar, data=covs, corstr=corstr,
-                       family=ifelse(counts, "poisson", "gaussian")))$coefficients
+                       family=ifelse(counts, "poisson", "gaussian"),
+                       weights=covs$weights))$coefficients
     covariate = rownames(s)[2]
     row = s[covariate,]
     if(counts) covariate=paste0(covariate, ".poisson")
@@ -313,7 +314,7 @@ mixed_modelr = function(formula, covs){
     suppressPackageStartupMessages(library('lme4', quietly=TRUE))
     suppressPackageStartupMessages(library('multcomp', quietly=TRUE))
     # automatically do logit regression.
-    m = lmer(formula, covs)
+    m = lmer(formula, covs, weights=covs$weights)
     covariate = names(fixef(m))[1 + as.integer(names(fixef(m))[1] == "(Intercept)")]
     r = ranef(m)
     for(re in names(r)){
