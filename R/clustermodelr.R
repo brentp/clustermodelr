@@ -588,7 +588,7 @@ readX = function(fname){
 #'        matrices to test.
 #' @param ... arguments sent to \code{\link{clust.lm}}
 #' @export
-mclust.lm.X = function(covs, meth, formula, X, gee.corstr=NULL, ..., mc.cores=4){
+mclust.lm.X = function(formula, covs, meth, X, gee.corstr=NULL, ..., mc.cores=4){
     library(parallel)
     library(data.table)
     formula = as.formula(formula)
@@ -627,7 +627,7 @@ mclust.lm.X = function(covs, meth, formula, X, gee.corstr=NULL, ..., mc.cores=4)
             sformula = sprintf("%s ~ %s + %s", lhs, rnames[irow], rhs)
         }
         # call with 1 core since we're already parallel here.
-        res = mclust.lm(covs2, meth, as.formula(sformula),
+        res = mclust.lm(as.formula(sformula), covs2, meth,
                            gee.corstr=gee.corstr, ..., mc.cores=1)
         res$X = rnames[irow]
         res$model = sformula
