@@ -3,7 +3,7 @@
 \title{Use mixed-effects model in lme4 syntax to associate a covariate with a
 cluster of data.}
 \usage{
-  mixed_modelr(covs, formula)
+  mixed_modelr(formula, covs)
 }
 \arguments{
   \item{covs}{covariate data.frame containing the terms in

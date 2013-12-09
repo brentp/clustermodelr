@@ -10,21 +10,21 @@ meth = as.matrix(read.csv(system.file("extdata", "example-meth.csv",
 test_that("can run single column", {
     meth1 = cbind(meth[,1])
     formula = methylation ~ disease
-    expect_that(length(lmr(covs, meth1, formula)), equals(3))
-    expect_true("p" %in% names(lmr(covs, meth1, formula)))
-    expect_true("coef" %in% names(lmr(covs, meth1, formula)))
+    expect_that(length(lmr(formula, covs, meth1)), equals(3))
+    expect_true("p" %in% names(lmr(formula, covs, meth1)))
+    expect_true("coef" %in% names(lmr(formula, covs, meth1)))
 })
 
 test_that("can run models", {
     formula = methylation ~ disease
-    expect_that(length(clust.lm(covs, meth, formula, combine="liptak")), equals(3))
-    expect_that(length(clust.lm(covs, meth, formula, combine="z-score")), equals(3))
-    expect_that(length(bumpingr(covs, meth, formula, n_sims=3)), equals(3))
-    expect_that(length(clust.lm(covs, meth, formula, gee.idvar="id", gee.corstr="ar")), equals(3))
-    expect_that(length(clust.lm(covs, meth, disease ~ 1, skat=TRUE)), equals(3))
+    expect_that(length(clust.lm(formula, covs, meth, combine="liptak")), equals(3))
+    expect_that(length(clust.lm(formula, covs, meth, combine="z-score")), equals(3))
+    expect_that(length(bumpingr(formula, covs, meth, n_sims=3)), equals(3))
+    expect_that(length(clust.lm(formula, covs, meth, gee.idvar="id", gee.corstr="ar")), equals(3))
+    expect_that(length(clust.lm(disease ~ 1, covs, meth, skat=TRUE)), equals(3))
 
     formula = methylation ~ disease + (1|id) + (1|CpG)
-    expect_that(length(clust.lm(covs, meth, formula)), equals(3))
+    expect_that(length(clust.lm(formula, covs, meth)), equals(3))
 
 })
 
@@ -40,14 +40,14 @@ test_that("can run models on sparse data", {
 
     covs = data.frame(case=c(rep(1, 20), rep(0, 20)))
     rownames(meth) = rownames(covs) = paste0("sample_", 1:40)
-    res = clust.lm(covs, meth, formula, combine="liptak")
+    res = clust.lm(formula, covs, meth, combine="liptak")
     expect_true(!is.na(res$p))
-    res = combiner(covs, meth, formula)
+    res = combiner(formula, covs, meth)
     expect_true(!is.na(res$p))
-    bres = bumpingr(covs, meth, formula)
+    bres = bumpingr(formula, covs, meth)
     expect_that(bres$coef, equals(res$coef))
 
-    res = combiner(covs, meth, formula, combine.fn=zscore.combine)
+    res = combiner(formula, covs, meth, combine.fn=zscore.combine)
     expect_true(!is.na(res$p))
 
 })

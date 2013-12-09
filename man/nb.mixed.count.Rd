@@ -3,14 +3,14 @@
 \title{Fit a mixed effect model with lme4 syntax on count data using glmer.nb on
 count data.}
 \usage{
-  nb.mixed.count(covs, formula)
+  nb.mixed.count(formula, covs)
 }
 \arguments{
+  \item{formula}{an R formula containing "methylation"}
+
   \item{covs}{covariate data.frame containing the terms in
   formula except "methylation" which is added
   automatically}
-
-  \item{formula}{an R formula containing "methylation"}
 }
 \value{
   \code{list(covariate, p, coef)} where p and coef are for

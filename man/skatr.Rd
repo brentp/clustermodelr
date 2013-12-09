@@ -2,17 +2,17 @@
 \alias{skatr}
 \title{Use SKAT to associate a covariate with a cluster of data.}
 \usage{
-  skatr(covs, meth, formula,
+  skatr(formula, covs, meth,
     r.corr = c(0, 0.015, 0.06, 0.15))
 }
 \arguments{
+  \item{formula}{an R formula containing "methylation"}
+
   \item{covs}{covariate data.frame containing the terms in
   formula except "methylation" which is added
   automatically}
 
   \item{meth}{a matrix of correlated data.}
-
-  \item{formula}{an R formula containing "methylation"}
 
   \item{r.corr}{list of weights between kernel and rare
   variant test.}

@@ -2,16 +2,16 @@
 \alias{bumpingr}
 \title{Run a local bump-hunting algorithm}
 \usage{
-  bumpingr(covs, meth, formula, n_sims = 20, mc.cores = 1)
+  bumpingr(formula, covs, meth, n_sims = 20, mc.cores = 1)
 }
 \arguments{
+  \item{formula}{an R formula containing "methylation"}
+
   \item{covs}{covariate data.frame containing the terms in
   formula except "methylation" which is added
   automatically}
 
   \item{meth}{a matrix of correlated data.}
-
-  \item{formula}{an R formula containing "methylation"}
 
   \item{n_sims}{this is currently used as the minimum
   number of shuffled data sets to compare to. If the

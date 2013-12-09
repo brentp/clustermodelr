@@ -2,18 +2,18 @@
 \alias{clust.lm}
 \title{dispatch to one of the implemented cluster methods}
 \usage{
-  clust.lm(covs, meth, formula, gee.corstr = NULL,
+  clust.lm(formula, covs, meth, gee.corstr = NULL,
     gee.idvar = NULL, counts = FALSE, bumping = FALSE,
     combine = c(NA, "liptak", "z-score"), skat = FALSE)
 }
 \arguments{
+  \item{formula}{an R formula containing "methylation"}
+
   \item{covs}{covariate data.frame containing the terms in
   formula except "methylation" which is added
   automatically}
 
   \item{meth}{a matrix of correlated data.}
-
-  \item{formula}{an R formula containing "methylation"}
 
   \item{gee.corstr}{if specified, the the corstr arg to
   geeglm.  gee.idvar must also be specified.}

@@ -37,6 +37,7 @@ stouffer_liptak.combine = function(pvalues, sigma){
 zscore.combine = function(pvalues, sigma) {
     # from biseq paper
     n_probes = length(pvalues)
+    stopifnot(n_probes == nrow(sigma))
     z = mean(qnorm(pvalues, lower.tail=TRUE))
     sz = 1/n_probes * sqrt(n_probes + 2 * sum(sigma[lower.tri(sigma)]))
     pnorm(z/sz, lower.tail=TRUE)

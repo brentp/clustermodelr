@@ -47,16 +47,16 @@ suppressPackageStartupMessages(library("limma", quietly=TRUE))
 #' 
 #' Unlike most of the function in this package, this function is used on a
 #' single site.
+#' @param formula an R formula containing "methylation"
 #' @param covs covariate data.frame containing the terms in formula
 #'        except "methylation" which is added automatically
 #' @param methylation a single column matrix or a vector the same length
 #'        as \code{nrow(covs)}
-#' @param formula an R formula containing "methylation"
 #' @return \code{list(covariate, p, coef)} where p and coef are for the coefficient
 #'         of the first term on the RHS of the model.
 #' @export
-lmr = function(covs, methylation, formula){
-    covs$methylation = methylation
+lmr = function(formula, covs, methylation=NULL){
+    if(!is.null(methylation)) covs$methylation = methylation
     s = summary(lm(formula, covs))$coefficients
     covariate = rownames(s)[2]
     row = s[2,]
@@ -66,23 +66,24 @@ lmr = function(covs, methylation, formula){
 #' Run lm on each column in a cluster and combine p-values with the 
 #' either stouffer-liptak or zscore method.
 #' 
+#' @param formula an R formula containing "methylation"
 #' @param covs covariate data.frame containing the terms in formula
 #'        except "methylation" which is added automatically
 #' @param meth a matrix of correlated data.
-#' @param formula an R formula containing "methylation"
 #' @param cor.method either "spearman" or "pearson"
 #' @param combine.fn a function that takes a list of p-values and
 #'        a correlation matrix and returns a combined p-value
+#'        \code{\link{stouffer_liptak.combine}} or \code{\link{zscore.combine}}
 #' @return \code{list(covariate, p, coef)} where p and coef are for the coefficient
 #'         of the first term on the RHS of the model.
 #' @export
-combiner = function(covs, meth, formula, cor.method="spearman",
+combiner = function(formula, covs, meth, cor.method="spearman",
                             combine.fn=stouffer_liptak.combine){
     covs$methylation = 1 #
     mod = model.matrix(formula, covs)
     # if there is missing data, have to send to another function.
     if(any(is.na(meth)) | nrow(mod) != nrow(covs)){
-        return(combiner.missing(covs, meth, formula, cor.method, combine.fn))
+        return(combiner.missing(formula, covs, meth, cor.method, combine.fn))
     }
     library(limma)
     sigma = abs(cor(meth, method=cor.method))
@@ -102,17 +103,20 @@ combiner = function(covs, meth, formula, cor.method="spearman",
 #' Run lm on each column in a cluster and combine p-values with the 
 #' Stouffer-Liptak method or the z-score method. Missing data OK.
 #' 
+#' @param formula an R formula containing "methylation"
 #' @param covs covariate data.frame containing the terms in formula
 #'        except "methylation" which is added automatically
 #' @param meth a matrix of correlated data.
-#' @param formula an R formula containing "methylation"
 #' @param cor.method either "spearman" or "pearson"
+#' @param combine.fn a function that takes a list of p-values and
+#'        a correlation matrix and returns a combined p-value
+#'        \code{\link{stouffer_liptak.combine}} or \code{\link{zscore.combine}}
 #' @return \code{list(covariate, p, coef)} where p and coef are for the coefficient
 #'         of the first term on the RHS of the model.
-combiner.missing = function(covs, meth, formula, cor.method="spearman",
+combiner.missing = function(formula, covs, meth, cor.method="spearman",
             combine.fn=stouffer_liptak.combine){
     res = lapply(1:ncol(meth), function(icol){
-        lmr(covs, meth[,icol], formula)
+        lmr(formula, covs, meth[,icol])
     })  
     pvals = unlist(lapply(1:length(res), function(i){ res[[i]]$p }))
     sigma = cor(meth, use="pairwise.complete.obs")
@@ -174,17 +178,17 @@ sum.lowess = function(icoefs, weights, span=0.2){
 #' Due to the shufflings, this is much slower than the other functions in this
 #' package.
 #' 
+#' @param formula an R formula containing "methylation"
 #' @param covs covariate data.frame containing the terms in formula
 #'        except "methylation" which is added automatically
 #' @param meth a matrix of correlated data.
-#' @param formula an R formula containing "methylation"
 #' @param n_sims this is currently used as the minimum number of shuffled data
 #'        sets to compare to. If the p-value is low, it will do more shufflings
 #' @param mc.cores sent to mclapply for parallelization
 #' @return \code{list(covariate, p, coef)} where p and coef are for the coefficient
 #'         of the first term on the RHS of the model.
 #' @export
-bumpingr = function(covs, meth, formula, n_sims=20, mc.cores=1){
+bumpingr = function(formula, covs, meth, n_sims=20, mc.cores=1){
     suppressPackageStartupMessages(library('parallel', quietly=TRUE))
     suppressPackageStartupMessages(library("limma", quietly=TRUE))
     covs$methylation = 1 # for formula => model.matrix
@@ -225,10 +229,10 @@ bumpingr = function(covs, meth, formula, n_sims=20, mc.cores=1){
     raw_beta_sum = sum(coefficients(fit)[,covariate])
     ngt = sum(abs(sim_beta_sums) >= abs(beta_sum))
     # progressive monte-carlo: only do lots of sims when it has a low p-value.
-    if(ngt < 2 & n_sims == 20) return(bumpingr(covs, meth, formula, 100, mc.cores))
-    if(ngt < 4 & n_sims == 100) return(bumpingr(covs, meth, formula, 2000, mc.cores))
-    if(ngt < 10 & n_sims == 2000) return(bumpingr(covs, meth, formula, 5000, mc.cores))
-    if(ngt < 10 & n_sims == 5000) return(bumpingr(covs, meth, formula, 15000, mc.cores))
+    if(ngt < 2 & n_sims == 20) return(bumpingr(formula, covs, meth, 100, mc.cores))
+    if(ngt < 4 & n_sims == 100) return(bumpingr(formula, covs, meth, 2000, mc.cores))
+    if(ngt < 10 & n_sims == 2000) return(bumpingr(formula, covs, meth, 5000, mc.cores))
+    if(ngt < 10 & n_sims == 5000) return(bumpingr(formula, covs, meth, 15000, mc.cores))
     pval = (1 + ngt) / (1 + n_sims)
     return(list(covariate=covariate, p=pval, coef=raw_beta_sum / nrow(meth)))
 }
@@ -237,13 +241,13 @@ bumpingr = function(covs, meth, formula, n_sims=20, mc.cores=1){
 #' Fit a mixed effect model with lme4 syntax on count data using glmer.nb on
 #' count data.
 #'
+#' @param formula an R formula containing "methylation"
 #' @param covs covariate data.frame containing the terms in formula
 #'        except "methylation" which is added automatically
-#' @param formula an R formula containing "methylation"
 #' @return \code{list(covariate, p, coef)} where p and coef are for the coefficient
 #'         of the first term on the RHS of the model.
 #' @export
-nb.mixed.count = function(covs, formula){
+nb.mixed.count = function(formula, covs){
     w = options("warn")$warn
     e = options("error")$error
     options(warn=0, error=NULL)
@@ -260,16 +264,16 @@ nb.mixed.count = function(covs, formula){
 #' Use Generalized Estimating Equations to assign significance to a cluster
 #' of data.
 #' 
+#' @param formula an R formula containing "methylation"
 #' @param covs covariate data.frame containing the terms in formula
 #'        except "methylation" which is added automatically
-#' @param formula an R formula containing "methylation"
 #' @param idvar idvar sent to \code{geepack::geeglm}
 #' @param corstr the corstr sent to \code{geepack::geeglm}
 #' @param counts if TRUE, then the poisson family is used.
 #' @return \code{list(covariate, p, coef)} where p and coef are for the coefficient
 #'         of the first term on the RHS of the model.
 #' @export
-geer = function(covs, formula, idvar="CpG", corstr="ex", counts=FALSE){
+geer = function(formula, covs, idvar="CpG", corstr="ex", counts=FALSE){
     # assume it's already sorted by CpG, then by id.
     if(idvar != "CpG" && corstr == "ar"){
         covs = covs[order(covs[,idvar], covs$CpG),]
@@ -305,13 +309,19 @@ geer = function(covs, formula, idvar="CpG", corstr="ex", counts=FALSE){
 #' @return \code{list(covariate, p, coef)} where p and coef are for the coefficient
 #'         of the first term on the RHS of the model.
 #' @export
-mixed_modelr = function(covs, formula){
+mixed_modelr = function(formula, covs){
     suppressPackageStartupMessages(library('lme4', quietly=TRUE))
     suppressPackageStartupMessages(library('multcomp', quietly=TRUE))
     # automatically do logit regression.
     m = lmer(formula, covs)
-    # take the first column unless it is intercept
     covariate = names(fixef(m))[1 + as.integer(names(fixef(m))[1] == "(Intercept)")]
+    r = ranef(m)
+    for(re in names(r)){
+        if(length(unique(r[[re]][[1]])) == 1){
+            return(list(covariate=covariate, p=1, coef=NaN))
+        }
+    }
+    # take the first column unless it is intercept
     s = summary(glht(m, paste(covariate, "0", sep=" == ")))
     return(list(covariate=covariate, p=s$test$pvalues[[1]], coef=s$test$coefficients[[1]]))
 }
@@ -323,15 +333,15 @@ mixed_modelr = function(covs, formula){
 #' And the result would be testing if adding the correlated matrix of
 #' data (with all the assumptions of SKAT) improves that null model.
 #' 
+#' @param formula an R formula containing "methylation"
 #' @param covs covariate data.frame containing the terms in formula
 #'        except "methylation" which is added automatically
 #' @param meth a matrix of correlated data.
-#' @param formula an R formula containing "methylation"
 #' @param r.corr list of weights between kernel and rare variant test.
 #' @return \code{list(covariate, p, coef)} where p and coef are for the coefficient
 #'         of the first term on the RHS of the model.
 #' @export
-skatr = function(covs, meth, formula, r.corr=c(0.00, 0.015, 0.06, 0.15)){
+skatr = function(formula, covs, meth, r.corr=c(0.00, 0.015, 0.06, 0.15)){
     suppressPackageStartupMessages(library('SKAT', quietly=TRUE))
     covariate = all.vars(formula)[1]
 
@@ -373,10 +383,10 @@ expand.covs = function(covs, meth){
 #' must be specified. To run a linear model, simply send the formula
 #' in lme4 syntax
 #' 
+#' @param formula an R formula containing "methylation"
 #' @param covs covariate data.frame containing the terms in formula
 #'        except "methylation" which is added automatically
 #' @param meth a matrix of correlated data.
-#' @param formula an R formula containing "methylation"
 #' @param gee.corstr if specified, the the corstr arg to geeglm.
 #'        gee.idvar must also be specified.
 #' @param gee.idvar if specified, the cluster variable to geeglm
@@ -388,7 +398,7 @@ expand.covs = function(covs, meth){
 #'        model will look like: \code{disease ~ 1} and it will be tested
 #'        against the methylation matrix
 #' @export
-clust.lm = function(covs, meth, formula,
+clust.lm = function(formula, covs, meth,
                     gee.corstr=NULL, gee.idvar=NULL,
                     counts=FALSE,
                     bumping=FALSE, combine=c(NA, "liptak", "z-score"), skat=FALSE){
@@ -402,24 +412,24 @@ clust.lm = function(covs, meth, formula,
         lhs = grep("|", attr(terms(formula), "term.labels"), fixed=TRUE, value=TRUE, invert=TRUE)
         lhs = paste(lhs, collapse=" + ")
         formula = as.formula(paste("methylation", lhs, sep=" ~ "))
-        return(lmr(covs, meth, formula))
+        return(lmr(formula, covs, meth))
     }
 
     # we assume there is one extra column for each CpG
     rownames(meth) = rownames(covs)
 
     if(bumping){ # wide
-        return(bumpingr(covs, t(meth), formula))
+        return(bumpingr(formula, covs, t(meth)))
     }
     if(skat){ # wide
-        return(skatr(covs, meth, formula))
+        return(skatr(formula, covs, meth))
     }
     if(!is.na(combine)){ # wide
         if(combine == "liptak"){
-            return(combiner(covs, meth, formula, combine.fn=stouffer_liptak.combine))
+            return(combiner(formula, covs, meth, combine.fn=stouffer_liptak.combine))
         } 
         stopifnot(combine == "z-score")
-        return(combiner(covs, meth, formula, combine.fn=zscore.combine))
+        return(combiner(formula, covs, meth, combine.fn=zscore.combine))
     }
 
     ###########################################
@@ -432,13 +442,13 @@ clust.lm = function(covs, meth, formula,
     if (is.null(gee.corstr)){
         stopifnot(is.mixed.model)
 
-        if(counts) return(nb.mixed.count(covs, formula))
+        if(counts) return(nb.mixed.count(formula, covs))
 
-        return(mixed_modelr(covs, formula))
+        return(mixed_modelr(formula, covs))
     # GEE
     } else if (!is.null(gee.corstr)){
         stopifnot(!is.null(gee.idvar))
-        return(geer(covs, formula, idvar=gee.idvar, corstr=gee.corstr, counts=counts))
+        return(geer(formula, covs, idvar=gee.idvar, corstr=gee.corstr, counts=counts))
     # limma
     } else {
         # TODO this goes in the matrix section above and uses
@@ -471,21 +481,21 @@ read.bin = function(bin.file){
 #' 
 #' See \code{\link{clust.lm}}
 #' 
+#' @param formula an R formula containing "methylation"
 #' @param covs covariate data.frame containing the terms in formula
 #'        except "methylation" which is added automatically
 #' @param meths a list of matrices of correlated data.
-#' @param formula an R formula containing "methylation"
 #' @param gee.corstr if specified, the the corstr arg to geeglm.
 #' @param mc.cores the number of processors to use if meths is a list of
 #'        matrices to test.
 #' @param ... arguments sent to \code{\link{clust.lm}}
 #' @export
-mclust.lm = function(covs, meths, formula, gee.corstr=NULL, ..., mc.cores=4){
+mclust.lm = function(formula, covs, meths, gee.corstr=NULL, ..., mc.cores=4){
     if(is.character(covs)) covs = read.csv(covs)
 
     # its a single entry, not list of matrices that we can parallelize
     if(is.matrix(meths) || is.data.frame(meths)){
-        res = (clust.lm(covs, meths, formula, gee.corstr=gee.corstr, ...))
+        res = (clust.lm(formula, covs, meths, gee.corstr=gee.corstr, ...))
         return(data.frame(res))
     }
 
@@ -494,7 +504,7 @@ mclust.lm = function(covs, meths, formula, gee.corstr=NULL, ..., mc.cores=4){
 
     cluster_ids = 1:length(meths)
     results = mclapply(cluster_ids, function(cs){
-        res = try(clust.lm(covs, meths[[cs]], formula, gee.corstr=gee.corstr, ...))
+        res = try(clust.lm(formula, covs, meths[[cs]], gee.corstr=gee.corstr, ...))
         if(!inherits(res, "try-error")){
             res$cluster_id = cs
             return(res)
@@ -509,26 +519,28 @@ mclust.lm = function(covs, meths, formula, gee.corstr=NULL, ..., mc.cores=4){
 
 
 if(FALSE){
-    covs = read.delim("clustercorr/tests/example-covariates.txt")
+    source('R/combine.R')
+    covs = read.delim("inst/extdata/example-covariates.txt")
     covs$id = 1:nrow(covs)
-    meth = read.csv('clustercorr/tests/example-meth.csv', row.names=1)
+    meth = read.csv('inst/extdata/example-meth.csv', row.names=1)
 
     #  check with only a single value
-    meth = cbind(meth[,1])
+    #meth = cbind(meth[,1])
     print(ncol(meth))
 
-    print(mclust.lm(covs, meth, methylation ~ disease + (1|id) + (1|CpG)))
+    print(mclust.lm(methylation ~ disease + (1|id) + (1|CpG), covs, meth))
 
     print('liptak')
-    print(mclust.lm(covs, meth, methylation ~ disease, liptak=TRUE))
+    print(mclust.lm(methylation ~ disease, covs, meth, combine="liptak"))
+    print(mclust.lm(methylation ~ disease, covs, meth, combine="z-score"))
 
-    print(mclust.lm(covs, meth, methylation ~ disease + (1|id)))
-    #print(clust.lm(covs, methylation ~ gene.E, gee.idvar="id", gee.corstr="ex"))
-    print(mclust.lm(covs, meth, methylation ~ disease, gee.idvar="id", gee.corstr="ex"))
-    print(mclust.lm(covs, meth, methylation ~ disease, gee.idvar="id", gee.corstr="ar"))
+    print(mclust.lm(methylation ~ disease + (1|id), covs, meth,))
+    print(mclust.lm(methylation ~ disease, covs, meth, gee.idvar="id", gee.corstr="ex"))
+    print(mclust.lm(methylation ~ disease, covs, meth, gee.idvar="id", gee.corstr="ar"))
     print('bumping')
-    print(mclust.lm(covs, meth, methylation ~ disease, bumping=TRUE))
-    print(clust.lm(covs, as.matrix(meth), disease ~ 1, skat=TRUE))
+    print(mclust.lm(methylation ~ disease, covs, meth, bumping=TRUE))
+    print('sklat')
+    print(clust.lm(disease ~ 1, covs, as.matrix(meth), skat=TRUE))
 }
 
 #' read a matrix of numeric values with the first column as the row.names
