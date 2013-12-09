@@ -361,8 +361,13 @@ skatr = function(formula, covs, meth, r.corr=c(0.00, 0.015, 0.06, 0.15)){
 #'
 #' @param covs data.frame of covariates
 #' @param meth matrix of methylation with same number of rows as \code{covs}
+#' @param weights matrix of weights with same dim as of rows as \code{meth}
+#'        or NULL
+#' @return long-format data.frame with added columns for 'id', 'methylation'
+#'         and 'CpG' (and possibly 'weights').
+#'         Has nrow == ncol(meth) * nrow(meth).
 #' @export
-expand.covs = function(covs, meth){
+expand.covs = function(covs, meth, weights=NULL){
     if(!"id" %in% colnames(covs)) covs$id = as.factor(1:nrow(covs))
     n_samples = nrow(covs)
     meth = as.matrix(meth)
@@ -372,6 +377,12 @@ expand.covs = function(covs, meth){
     # need to replicated covs 4 times (1 per CpG)
     covs = covs[rep(1:nrow(covs), ncol(meth)),, drop=FALSE]
     cpgs = 1:ncol(meth)
+    if(!is.null(weights)){
+        stopifnot(nrow(weights) == n_samples)
+        dim(weights) = NULL
+        covs$weights = as.numeric(weights)
+    }
+
     dim(meth) = NULL
     covs$methylation = meth
     covs$CpG = as.factor(rep(cpgs, each=n_samples)) # 1 1 1, 2 2 2, etc since CpG's are grouped.
@@ -388,6 +399,8 @@ expand.covs = function(covs, meth){
 #' @param covs covariate data.frame containing the terms in formula
 #'        except "methylation" which is added automatically
 #' @param meth a matrix of correlated data.
+#' @param weights matrix of weights with same dim as of rows as \code{meth}
+#'        or NULL. Used in weighted regression.
 #' @param gee.corstr if specified, the the corstr arg to geeglm.
 #'        gee.idvar must also be specified.
 #' @param gee.idvar if specified, the cluster variable to geeglm
@@ -400,6 +413,7 @@ expand.covs = function(covs, meth){
 #'        against the methylation matrix
 #' @export
 clust.lm = function(formula, covs, meth,
+                    weights=NULL,
                     gee.corstr=NULL, gee.idvar=NULL,
                     counts=FALSE,
                     bumping=FALSE, combine=c(NA, "liptak", "z-score"), skat=FALSE){
@@ -412,6 +426,7 @@ clust.lm = function(formula, covs, meth,
         # remove random effects terms:
         lhs = grep("|", attr(terms(formula), "term.labels"), fixed=TRUE, value=TRUE, invert=TRUE)
         lhs = paste(lhs, collapse=" + ")
+        if(!is.null(weights)){ covs$weights = as.vector(weights) }
         formula = as.formula(paste("methylation", lhs, sep=" ~ "))
         return(lmr(formula, covs, meth))
     }
@@ -436,7 +451,7 @@ clust.lm = function(formula, covs, meth,
     ###########################################
     # GEE and mixed models require long format.
     ###########################################
-    covs = expand.covs(covs, meth) # TODO: make this send just the nrow, ncol
+    covs = expand.covs(covs, meth, weights) # TODO: make this send just the nrow, ncol
 
     is.mixed.model = any(grepl("|", attr(terms(formula), 'term.labels'), fixed=TRUE))
     # mixed-model
