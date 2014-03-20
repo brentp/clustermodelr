@@ -3,9 +3,8 @@
 \title{Run lm on each column in a cluster and combine p-values with the
 Stouffer-Liptak method or the z-score method. Missing data OK.}
 \usage{
-  combiner.missing(formula, covs, meth,
-    cor.method = "spearman",
-    combine.fn = stouffer_liptak.combine)
+combiner.missing(formula, covs, meth, weights = NULL,
+  cor.method = "spearman", combine.fn = stouffer_liptak.combine)
 }
 \arguments{
   \item{formula}{an R formula containing "methylation"}
@@ -16,6 +15,9 @@ Stouffer-Liptak method or the z-score method. Missing data OK.}
 
   \item{meth}{a matrix of correlated data.}
 
+  \item{weights}{optional weights matrix of same shape as
+  meth}
+
   \item{cor.method}{either "spearman" or "pearson"}
 
   \item{combine.fn}{a function that takes a list of
@@ -24,13 +26,12 @@ Stouffer-Liptak method or the z-score method. Missing data OK.}
   \code{\link{zscore.combine}}}
 }
 \value{
-  \code{list(covariate, p, coef)} where p and coef are for
-  the coefficient of the first term on the RHS of the
-  model.
+\code{list(covariate, p, coef)} where p and coef are for
+the coefficient of the first term on the RHS of the model.
 }
 \description{
-  Run lm on each column in a cluster and combine p-values
-  with the Stouffer-Liptak method or the z-score method.
-  Missing data OK.
+Run lm on each column in a cluster and combine p-values
+with the Stouffer-Liptak method or the z-score method.
+Missing data OK.
 }
 

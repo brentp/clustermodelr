@@ -3,8 +3,7 @@
 \title{dispatch to one of the implemented cluster methods. potentially reading
 the covariates from a file and parallelizing.}
 \usage{
-  mclust.lm(formula, covs, meths, gee.corstr = NULL, ...,
-    mc.cores = 4)
+mclust.lm(formula, covs, meths, gee.corstr = NULL, ..., mc.cores = 4)
 }
 \arguments{
   \item{formula}{an R formula containing "methylation"}
@@ -24,6 +23,6 @@ the covariates from a file and parallelizing.}
   \item{...}{arguments sent to \code{\link{clust.lm}}}
 }
 \description{
-  See \code{\link{clust.lm}}
+See \code{\link{clust.lm}}
 }
 

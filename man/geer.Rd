@@ -3,8 +3,7 @@
 \title{Use Generalized Estimating Equations to assign significance to a cluster
 of data.}
 \usage{
-  geer(formula, covs, idvar = "CpG", corstr = "ex",
-    counts = FALSE)
+geer(formula, covs, idvar = "CpG", corstr = "ex", counts = FALSE)
 }
 \arguments{
   \item{formula}{an R formula containing "methylation"}
@@ -20,12 +19,11 @@ of data.}
   \item{counts}{if TRUE, then the poisson family is used.}
 }
 \value{
-  \code{list(covariate, p, coef)} where p and coef are for
-  the coefficient of the first term on the RHS of the
-  model.
+\code{list(covariate, p, coef)} where p and coef are for
+the coefficient of the first term on the RHS of the model.
 }
 \description{
-  Use Generalized Estimating Equations to assign
-  significance to a cluster of data.
+Use Generalized Estimating Equations to assign significance
+to a cluster of data.
 }
 

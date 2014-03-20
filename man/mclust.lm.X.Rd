@@ -3,8 +3,7 @@
 \title{dispatch to one of the implemented cluster methods. potentially reading
 the covariates from a file and parallelizing.}
 \usage{
-  mclust.lm.X(covs, meth, formula, X, gee.corstr = NULL,
-    ..., mc.cores = 4)
+mclust.lm.X(formula, covs, meth, X, gee.corstr = NULL, ..., mc.cores = 4)
 }
 \arguments{
   \item{covs}{covariate data.frame containing the terms in
@@ -30,25 +29,25 @@ the covariates from a file and parallelizing.}
   \item{...}{arguments sent to \code{\link{clust.lm}}}
 }
 \description{
-  This method implements a sorted of methyl-eQTL with a
-  formula specified as:
+This method implements a sorted of methyl-eQTL with a
+formula specified as:
 }
 \details{
-  \code{methylation ~ disease + age}
+\code{methylation ~ disease + age}
 
-  each row in \code{X} is inserted into the model and
-  tested so the model would be:
+each row in \code{X} is inserted into the model and tested
+so the model would be:
 
-  \code{methylation ~ X[irow,] + disease + age}
+\code{methylation ~ X[irow,] + disease + age}
 
-  and the reported coefficent and p-value are from the
-  X[irow,] covariate. This allows one to test a number of
-  expression probes against a (number of) cluster of
-  correlated methylation probes. Though we could also use
-  this to test, for example a set of methylation probes
-  against every OTU in a microbiome study. In this way, we
-  could find DMRs related to the microbiome.
+and the reported coefficent and p-value are from the
+X[irow,] covariate. This allows one to test a number of
+expression probes against a (number of) cluster of
+correlated methylation probes. Though we could also use
+this to test, for example a set of methylation probes
+against every OTU in a microbiome study. In this way, we
+could find DMRs related to the microbiome.
 
-  See \code{\link{clust.lm}}
+See \code{\link{clust.lm}}
 }
 

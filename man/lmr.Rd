@@ -2,7 +2,7 @@
 \alias{lmr}
 \title{Run lm on a single site}
 \usage{
-  lmr(formula, covs, methylation = NULL)
+lmr(formula, covs, methylation = NULL, weights = NULL)
 }
 \arguments{
   \item{formula}{an R formula containing "methylation"}
@@ -13,14 +13,15 @@
 
   \item{methylation}{a single column matrix or a vector the
   same length as \code{nrow(covs)}}
+
+  \item{weights}{optional weights for lm}
 }
 \value{
-  \code{list(covariate, p, coef)} where p and coef are for
-  the coefficient of the first term on the RHS of the
-  model.
+\code{list(covariate, p, coef)} where p and coef are for
+the coefficient of the first term on the RHS of the model.
 }
 \description{
-  Unlike most of the function in this package, this
-  function is used on a single site.
+Unlike most of the function in this package, this function
+is used on a single site.
 }
 

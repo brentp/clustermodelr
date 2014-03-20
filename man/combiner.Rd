@@ -3,8 +3,8 @@
 \title{Run lm on each column in a cluster and combine p-values with the
 either stouffer-liptak or zscore method.}
 \usage{
-  combiner(formula, covs, meth, cor.method = "spearman",
-    combine.fn = stouffer_liptak.combine)
+combiner(formula, covs, meth, cor.method = "spearman",
+  combine.fn = stouffer_liptak.combine, weights = NULL)
 }
 \arguments{
   \item{formula}{an R formula containing "methylation"}
@@ -21,14 +21,16 @@ either stouffer-liptak or zscore method.}
   p-values and a correlation matrix and returns a combined
   p-value \code{\link{stouffer_liptak.combine}} or
   \code{\link{zscore.combine}}}
+
+  \item{weights}{optional weights matrix of same shape as
+  meth}
 }
 \value{
-  \code{list(covariate, p, coef)} where p and coef are for
-  the coefficient of the first term on the RHS of the
-  model.
+\code{list(covariate, p, coef)} where p and coef are for
+the coefficient of the first term on the RHS of the model.
 }
 \description{
-  Run lm on each column in a cluster and combine p-values
-  with the either stouffer-liptak or zscore method.
+Run lm on each column in a cluster and combine p-values
+with the either stouffer-liptak or zscore method.
 }
 

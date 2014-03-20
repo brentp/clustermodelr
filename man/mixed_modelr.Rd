@@ -3,7 +3,7 @@
 \title{Use mixed-effects model in lme4 syntax to associate a covariate with a
 cluster of data.}
 \usage{
-  mixed_modelr(formula, covs)
+mixed_modelr(formula, covs)
 }
 \arguments{
   \item{covs}{covariate data.frame containing the terms in
@@ -13,14 +13,13 @@ cluster of data.}
   \item{formula}{an R formula containing "methylation"}
 }
 \value{
-  \code{list(covariate, p, coef)} where p and coef are for
-  the coefficient of the first term on the RHS of the
-  model.
+\code{list(covariate, p, coef)} where p and coef are for
+the coefficient of the first term on the RHS of the model.
 }
 \description{
-  An example model would look like: methylation ~ disease +
-  age + gender + (1|CpG) + (1|id) To determine the
-  associate of disease and methylation and allowing for
-  random intercepts by CpG site and by sample id.
+An example model would look like: methylation ~ disease +
+age + gender + (1|CpG) + (1|id) To determine the associate
+of disease and methylation and allowing for random
+intercepts by CpG site and by sample id.
 }
 

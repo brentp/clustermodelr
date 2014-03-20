@@ -52,12 +52,18 @@ suppressPackageStartupMessages(library("limma", quietly=TRUE))
 #'        except "methylation" which is added automatically
 #' @param methylation a single column matrix or a vector the same length
 #'        as \code{nrow(covs)}
+#' @param weights optional weights for lm
 #' @return \code{list(covariate, p, coef)} where p and coef are for the coefficient
 #'         of the first term on the RHS of the model.
 #' @export
-lmr = function(formula, covs, methylation=NULL){
+lmr = function(formula, covs, methylation=NULL, weights=NULL){
     if(!is.null(methylation)) covs$methylation = methylation
-    s = summary(lm(formula, covs, weights=covs$weights))$coefficients
+    if(is.null(weights)){
+        s = summary(lm(formula, covs))$coefficients
+    } else {
+        covs$weights = weights
+        s = summary(lm(formula, covs, weights=weights, na.action=na.omit))$coefficients
+    }
     covariate = rownames(s)[2]
     row = s[2,]
     list(covariate=covariate, p=row[['Pr(>|t|)']], coef=row[['Estimate']])
@@ -74,16 +80,18 @@ lmr = function(formula, covs, methylation=NULL){
 #' @param combine.fn a function that takes a list of p-values and
 #'        a correlation matrix and returns a combined p-value
 #'        \code{\link{stouffer_liptak.combine}} or \code{\link{zscore.combine}}
+#' @param weights optional weights matrix of same shape as meth
 #' @return \code{list(covariate, p, coef)} where p and coef are for the coefficient
 #'         of the first term on the RHS of the model.
 #' @export
 combiner = function(formula, covs, meth, cor.method="spearman",
-                            combine.fn=stouffer_liptak.combine){
+                            combine.fn=stouffer_liptak.combine, weights=NULL){
     covs$methylation = 1 #
     mod = model.matrix(formula, covs)
     # if there is missing data, have to send to another function.
     if(any(is.na(meth)) | nrow(mod) != nrow(covs)){
-        return(combiner.missing(formula, covs, meth, cor.method, combine.fn))
+        return(combiner.missing(formula, covs, meth, cor.method, combine.fn,
+                                weights=weights))
     }
     library(limma)
     sigma = abs(cor(meth, method=cor.method))
@@ -94,7 +102,7 @@ combiner = function(formula, covs, meth, cor.method="spearman",
 
     fit = eBayes(lmFit(meth, mod))
     beta.orig = coefficients(fit)[,covariate]
-    pvals = topTable(fit, coef=covariate, number=Inf)[,"P.Value"]
+    pvals = topTable(fit, coef=covariate, number=Inf, sort.by='none')[,"P.Value"]
     beta.ave = sum(beta.orig) / length(beta.orig)
     p = combine.fn(pvals, sigma)
     return(list(covariate=covariate, p=p, coef=beta.ave))
@@ -107,16 +115,17 @@ combiner = function(formula, covs, meth, cor.method="spearman",
 #' @param covs covariate data.frame containing the terms in formula
 #'        except "methylation" which is added automatically
 #' @param meth a matrix of correlated data.
+#' @param weights optional weights matrix of same shape as meth
 #' @param cor.method either "spearman" or "pearson"
 #' @param combine.fn a function that takes a list of p-values and
 #'        a correlation matrix and returns a combined p-value
 #'        \code{\link{stouffer_liptak.combine}} or \code{\link{zscore.combine}}
 #' @return \code{list(covariate, p, coef)} where p and coef are for the coefficient
 #'         of the first term on the RHS of the model.
-combiner.missing = function(formula, covs, meth, cor.method="spearman",
+combiner.missing = function(formula, covs, meth, weights=NULL, cor.method="spearman",
             combine.fn=stouffer_liptak.combine){
     res = lapply(1:ncol(meth), function(icol){
-        lmr(formula, covs, meth[,icol])
+        lmr(formula, covs, meth[,icol], weights=weights[,icol])
     })  
     pvals = unlist(lapply(1:length(res), function(i){ res[[i]]$p }))
     sigma = cor(meth, use="pairwise.complete.obs")
@@ -127,14 +136,14 @@ combiner.missing = function(formula, covs, meth, cor.method="spearman",
 
 
 # for bumping
-permute.residuals = function(mat, mod, mod0, iterations=100, p_samples=1, mc.cores=10){
+permute.residuals = function(mat, mod, mod0, iterations=100, p_samples=1, mc.cores=10, weights=NULL){
     stopifnot(nrow(mod) == ncol(mat))
 
-    reduced_lm = lmFit(mat, mod0)
+    reduced_lm = lmFit(mat, mod0, weights=weights)
     reduced_residuals = residuals(reduced_lm, mat)
     reduced_fitted = fitted(reduced_lm)
 
-    fit = lmFit(mat, mod)
+    fit = lmFit(mat, mod, weights=weights)
 
     coef.name = setdiff(colnames(mod), colnames(mod0))
     beta.orig = coefficients(fit)[,coef.name]
@@ -144,7 +153,7 @@ permute.residuals = function(mat, mod, mod0, iterations=100, p_samples=1, mc.cor
 
     beta.list = mclapply(1:iterations, function(ix){
         mat_sim = reduced_fitted + reduced_residuals[,sample(1:nc)]
-        ifit = lmFit(mat_sim, mod)
+        ifit = lmFit(mat_sim, mod, weights=weights)
         icoef = coefficients(ifit)[,coef.name]
         w = ifit$sigma
         # get names as integer positions:
@@ -182,13 +191,14 @@ sum.lowess = function(icoefs, weights, span=0.2){
 #' @param covs covariate data.frame containing the terms in formula
 #'        except "methylation" which is added automatically
 #' @param meth a matrix of correlated data.
+#' @param weights optional weights matrix of same shape as meth
 #' @param n_sims this is currently used as the minimum number of shuffled data
 #'        sets to compare to. If the p-value is low, it will do more shufflings
 #' @param mc.cores sent to mclapply for parallelization
 #' @return \code{list(covariate, p, coef)} where p and coef are for the coefficient
 #'         of the first term on the RHS of the model.
 #' @export
-bumpingr = function(formula, covs, meth, n_sims=20, mc.cores=1){
+bumpingr = function(formula, covs, meth, weights=NULL, n_sims=20, mc.cores=1){
     suppressPackageStartupMessages(library('parallel', quietly=TRUE))
     suppressPackageStartupMessages(library("limma", quietly=TRUE))
     covs$methylation = 1 # for formula => model.matrix
@@ -208,16 +218,19 @@ bumpingr = function(formula, covs, meth, n_sims=20, mc.cores=1){
     mod0 = mod[,!colnames(mod) == covariate, drop=FALSE]
     if((!ncol(meth) == nrow(covs)) && nrow(meth) == nrow(covs)){
         meth = t(meth)
+        if(!(is.null(weights))){ weights = t(weights) }
     }
     if(!is.null(keep)){
         meth = meth[,keep]
+
+        if(!(is.null(weights))) weights = weights[,keep]
     }
 
     sim_beta_sums = permute.residuals(meth, mod, mod0, iterations=n_sims, 
-                                      mc.cores=mc.cores)
+                                      mc.cores=mc.cores, weights=weights)
     stopifnot(length(sim_beta_sums) == n_sims)
 
-    fit = lmFit(meth, mod)
+    fit = lmFit(meth, mod, weights=weights)
     w = fit$sigma
 
     icoef = coefficients(fit)[,covariate]
@@ -284,10 +297,16 @@ geer = function(formula, covs, idvar="CpG", corstr="ex", counts=FALSE){
     # NOTE, both of these are required as geeglm needs to deparse and
     # R CRAN has to make sure clustervar exists.
     clustervar = covs$clustervar = covs[,idvar]
+    weights = covs$weights
     # can't do logistc with idvar of id, gives bad results for some reason
-    s = summary(geeglm(formula, id=clustervar, data=covs, corstr=corstr,
+    if(!is.null(weights)){
+        s = summary(geeglm(formula, id=clustervar, data=covs, corstr=corstr,
                        family=ifelse(counts, "poisson", "gaussian"),
-                       weights=covs$weights))$coefficients
+                       weights=weights))$coefficients
+    } else {
+        s = summary(geeglm(formula, id=clustervar, data=covs, corstr=corstr,
+                           family=ifelse(counts, "poisson", "gaussian")))$coefficients
+    }
     covariate = rownames(s)[2]
     row = s[covariate,]
     if(counts) covariate=paste0(covariate, ".poisson")
@@ -348,7 +367,7 @@ skatr = function(formula, covs, meth, r.corr=c(0.00, 0.015, 0.06, 0.15)){
 
     capture.output(obj <- SKAT_Null_Model(formula, out_type="D", data=covs))
     #sk <- SKAT(meth, obj, is_check_genotype=FALSE, method="davies", r.corr=0.6, kernel="linear")
-    sk <- SKAT(meth, obj, is_check_genotype=FALSE, method="optimal.adj", kernel="linear",
+    sk <- SKAT(as.matrix(meth), obj, is_check_genotype=FALSE, method="optimal.adj", kernel="linear",
             r.corr=r.corr)
     #sk <- SKAT(meth, obj, is_check_genotype=TRUE, method="optimal.adj", kernel="linear.weighted", weights.beta=c(1, 10))
     #sk <- SKAT(meth, obj, is_check_genotype=TRUE, method="optimal.adj", kernel="linear")
@@ -426,26 +445,26 @@ clust.lm = function(formula, covs, meth,
         # remove random effects terms:
         lhs = grep("|", attr(terms(formula), "term.labels"), fixed=TRUE, value=TRUE, invert=TRUE)
         lhs = paste(lhs, collapse=" + ")
-        if(!is.null(weights)){ covs$weights = as.vector(weights) }
         formula = as.formula(paste("methylation", lhs, sep=" ~ "))
-        return(lmr(formula, covs, meth))
+        return(lmr(formula, covs, meth, weights))
     }
 
     # we assume there is one extra column for each CpG
     rownames(meth) = rownames(covs)
 
     if(bumping){ # wide
-        return(bumpingr(formula, covs, t(meth)))
+        return(bumpingr(formula, covs, t(meth), 
+                        weights=ifelse(is.null(weights), NULL, t(weights))))
     }
     if(skat){ # wide
         return(skatr(formula, covs, meth))
     }
     if(!is.na(combine)){ # wide
         if(combine == "liptak"){
-            return(combiner(formula, covs, meth, combine.fn=stouffer_liptak.combine))
+            return(combiner(formula, covs, meth, combine.fn=stouffer_liptak.combine, weights=weights))
         } 
         stopifnot(combine == "z-score")
-        return(combiner(formula, covs, meth, combine.fn=zscore.combine))
+        return(combiner(formula, covs, meth, combine.fn=zscore.combine, weights=weights))
     }
 
     ###########################################

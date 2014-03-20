@@ -61,7 +61,7 @@ will be returned for that covariate.
 
 \subsubsection*{Stouffer Liptak}
 <<liptak>>=
-combiner(covs, meth, methylation ~ case)
+combiner(methylation ~ case, covs, meth)
 @
 This utilizes the information across the 4 probes to determine the significance and
 size of the association. Here we see that the p-value is quite low, especially when compared with the value from the single-probe t-test.
@@ -73,7 +73,7 @@ testing the fitted covariate of that dataset against the real dataset. As such,
 it takes longer to run:
 
 <<bumping>>=
-#bumpingr(covs, meth, methylation ~ case)
+#bumpingr(methyaltion ~ case, covs, meth)
 @
 
 The remaining methods take the data in long format where \emph{methylation}
@@ -98,17 +98,17 @@ Now we can test our methylation using the long methods. First using mixed-effect
 models with lme4 syntax.
 
 <<mixed_model>>=
-mixed_modelr(covs.long, methylation ~ case + (1|id))
-mixed_modelr(covs.long, methylation ~ case + (1|id) + (1|CpG))
+mixed_modelr(methylation ~ case + (1|id), covs.long)
+mixed_modelr(methylation ~ case + (1|id) + (1|CpG), covs.long)
 @
 
 \subsubsection*{GEE}
 Or we can use GEE's via \emph{geepack}
 <<gee>>=
-geer(covs.long, methylation ~ case, corstr="ar", idvar="id")
+geer(methylation ~ case, covs.long, corstr="ar", idvar="id")
 
-geer(covs.long[order(covs.long$CpG, covs.long$id),],
-     methylation ~ case, corstr="ex", idvar="CpG")
+geer(methylation ~ case, covs.long[order(covs.long$CpG, covs.long$id),],
+     corstr="ex", idvar="CpG")
 @
 
 Note that for GEE with \emph{autoregressive} the order of

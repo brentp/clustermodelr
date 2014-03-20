@@ -2,9 +2,9 @@
 \alias{clust.lm}
 \title{dispatch to one of the implemented cluster methods}
 \usage{
-  clust.lm(formula, covs, meth, gee.corstr = NULL,
-    gee.idvar = NULL, counts = FALSE, bumping = FALSE,
-    combine = c(NA, "liptak", "z-score"), skat = FALSE)
+clust.lm(formula, covs, meth, weights = NULL, gee.corstr = NULL,
+  gee.idvar = NULL, counts = FALSE, bumping = FALSE, combine = c(NA,
+  "liptak", "z-score"), skat = FALSE)
 }
 \arguments{
   \item{formula}{an R formula containing "methylation"}
@@ -14,6 +14,9 @@
   automatically}
 
   \item{meth}{a matrix of correlated data.}
+
+  \item{weights}{matrix of weights with same dim as of rows
+  as \code{meth} or NULL. Used in weighted regression.}
 
   \item{gee.corstr}{if specified, the the corstr arg to
   geeglm.  gee.idvar must also be specified.}
@@ -35,8 +38,8 @@
   and it will be tested against the methylation matrix}
 }
 \description{
-  For every method except mixed_model, one or more of the
-  arguments must be specified. To run a linear model,
-  simply send the formula in lme4 syntax
+For every method except mixed_model, one or more of the
+arguments must be specified. To run a linear model, simply
+send the formula in lme4 syntax
 }
 
