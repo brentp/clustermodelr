@@ -222,8 +222,7 @@ bumpingr = function(formula, covs, meth, weights=NULL, n_sims=20, mc.cores=1){
     }
     if(!is.null(keep)){
         meth = meth[,keep]
-
-        if(!(is.null(weights))) weights = weights[,keep]
+        if(!is.null(weights)) weights = weights[,keep]
     }
 
     sim_beta_sums = permute.residuals(meth, mod, mod0, iterations=n_sims, 
@@ -242,10 +241,10 @@ bumpingr = function(formula, covs, meth, weights=NULL, n_sims=20, mc.cores=1){
     raw_beta_sum = sum(coefficients(fit)[,covariate])
     ngt = sum(abs(sim_beta_sums) >= abs(beta_sum))
     # progressive monte-carlo: only do lots of sims when it has a low p-value.
-    if(ngt < 2 & n_sims == 20) return(bumpingr(formula, covs, meth, 100, mc.cores))
-    if(ngt < 4 & n_sims == 100) return(bumpingr(formula, covs, meth, 2000, mc.cores))
-    if(ngt < 10 & n_sims == 2000) return(bumpingr(formula, covs, meth, 5000, mc.cores))
-    if(ngt < 10 & n_sims == 5000) return(bumpingr(formula, covs, meth, 15000, mc.cores))
+    if(ngt < 2 & n_sims == 20) return(bumpingr(formula, covs, meth, n_sims=100, mc.cores=mc.cores))
+    if(ngt < 4 & n_sims == 100) return(bumpingr(formula, covs, meth, n_sims=2000, mc.cores=mc.cores))
+    if(ngt < 10 & n_sims == 2000) return(bumpingr(formula, covs, meth, n_sims=5000, mc.cores=mc.cores))
+    if(ngt < 10 & n_sims == 5000) return(bumpingr(formula, covs, meth, n_sims=15000, mc.cores=mc.cores))
     pval = (1 + ngt) / (1 + n_sims)
     return(list(covariate=covariate, p=pval, coef=raw_beta_sum / nrow(meth)))
 }
@@ -453,8 +452,9 @@ clust.lm = function(formula, covs, meth,
     rownames(meth) = rownames(covs)
 
     if(bumping){ # wide
-        return(bumpingr(formula, covs, t(meth), 
-                        weights=ifelse(is.null(weights), NULL, t(weights))))
+        w = NULL
+        if(!is.null(weights)) w=t(weights)
+        return(bumpingr(formula, covs, t(meth), weights=w))
     }
     if(skat){ # wide
         return(skatr(formula, covs, meth))
