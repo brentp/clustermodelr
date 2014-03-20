@@ -265,7 +265,9 @@ nb.mixed.count = function(formula, covs){
     options(warn=0, error=NULL)
     suppressPackageStartupMessages(library('lme4', quietly=TRUE))
     #s = summary(glmer(formula, covs, family="poisson"))$coefficients
-    s = summary(glmer.nb(formula, covs, weights=covs$weights))$coefficients
+    # glmer.nb doesn't normalize the weights.
+    weights = covs$weights * length(covs$weights) / sum(covs$weights)
+    s = summary(glmer.nb(formula, covs, weights=weights))$coefficients
     options(warn=w, error=e)
     covariate = paste0(rownames(s)[2], ".nb")
     row = s[2,]
