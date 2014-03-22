@@ -419,7 +419,7 @@ expand.covs = function(covs, meth, weights=NULL){
 #' @param covs covariate data.frame containing the terms in formula
 #'        except "methylation" which is added automatically
 #' @param meth a matrix of correlated data.
-#' @param weights matrix of weights with same dim as of rows as \code{meth}
+#' @param weights matrix of weights with same dim as \code{meth}
 #'        or NULL. Used in weighted regression.
 #' @param gee.corstr if specified, the the corstr arg to geeglm.
 #'        gee.idvar must also be specified.
@@ -447,6 +447,7 @@ clust.lm = function(formula, covs, meth,
         lhs = grep("|", attr(terms(formula), "term.labels"), fixed=TRUE, value=TRUE, invert=TRUE)
         lhs = paste(lhs, collapse=" + ")
         formula = as.formula(paste("methylation", lhs, sep=" ~ "))
+        # TODO: handle counts.
         return(lmr(formula, covs, meth, weights))
     }
 
@@ -527,7 +528,7 @@ read.bin = function(bin.file){
 #'        matrices to test.
 #' @param ... arguments sent to \code{\link{clust.lm}}
 #' @export
-mclust.lm = function(formula, covs, meths, gee.corstr=NULL, ..., mc.cores=4){
+mclust.lm = function(formula, covs, meths, weights=NULL, gee.corstr=NULL, ..., mc.cores=4){
     if(is.character(covs)) covs = read.csv(covs)
 
     # its a single entry, not list of matrices that we can parallelize
@@ -541,7 +542,13 @@ mclust.lm = function(formula, covs, meths, gee.corstr=NULL, ..., mc.cores=4){
 
     cluster_ids = 1:length(meths)
     results = mclapply(cluster_ids, function(cs){
-        res = try(clust.lm(formula, covs, meths[[cs]], gee.corstr=gee.corstr, ...))
+        if(!is.null(weights)){
+            res = try(clust.lm(formula, covs, meths[[cs]],
+                               wegihts=weights[[cs]], gee.corstr=gee.corstr, ...))
+        } else {
+            res = try(clust.lm(formula, covs, meths[[cs]],
+                               wegihts=weights[[cs]], gee.corstr=gee.corstr, ...))
+        }
         if(!inherits(res, "try-error")){
             res$cluster_id = cs
             return(res)
