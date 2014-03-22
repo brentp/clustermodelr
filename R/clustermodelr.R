@@ -544,10 +544,10 @@ mclust.lm = function(formula, covs, meths, weights=NULL, gee.corstr=NULL, ..., m
     results = mclapply(cluster_ids, function(cs){
         if(!is.null(weights)){
             res = try(clust.lm(formula, covs, meths[[cs]],
-                               wegihts=weights[[cs]], gee.corstr=gee.corstr, ...))
+                               weights=weights[[cs]], gee.corstr=gee.corstr, ...))
         } else {
             res = try(clust.lm(formula, covs, meths[[cs]],
-                               wegihts=weights[[cs]], gee.corstr=gee.corstr, ...))
+                               weights=weights[[cs]], gee.corstr=gee.corstr, ...))
         }
         if(!inherits(res, "try-error")){
             res$cluster_id = cs
