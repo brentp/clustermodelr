@@ -97,10 +97,11 @@ combiner = function(formula, covs, meth, cor.method="spearman",
     sigma = abs(cor(meth, method=cor.method))
     stopifnot(nrow(sigma) == ncol(meth))
     meth = t(meth)
+    if(!is.null(weights)){ weights = t(weights) }
 
     covariate = colnames(mod)[1 + as.integer(colnames(mod)[1] == "(Intercept)")]
 
-    fit = eBayes(lmFit(meth, mod))
+    fit = eBayes(lmFit(meth, mod, weights=weights))
     beta.orig = coefficients(fit)[,covariate]
     pvals = topTable(fit, coef=covariate, number=Inf, sort.by='none')[,"P.Value"]
     beta.ave = sum(beta.orig) / length(beta.orig)
