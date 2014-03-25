@@ -299,9 +299,9 @@ geer = function(formula, covs, idvar="CpG", corstr="ex", counts=FALSE){
     # NOTE, both of these are required as geeglm needs to deparse and
     # R CRAN has to make sure clustervar exists.
     clustervar = covs$clustervar = covs[,idvar]
-    weights = covs$weights
     # can't do logistc with idvar of id, gives bad results for some reason
-    if(!is.null(weights)){
+    if(!is.null(covs$weights)){
+        weights = covs$weights / sum(covs$weights) * length(covs$weights)
         s = summary(geeglm(formula, id=clustervar, data=covs, corstr=corstr,
                        family=ifelse(counts, "poisson", "gaussian"),
                        weights=weights))$coefficients
