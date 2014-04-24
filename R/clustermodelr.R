@@ -69,6 +69,28 @@ lmr = function(formula, covs, methylation=NULL, weights=NULL){
     list(covariate=covariate, p=row[['Pr(>|t|)']], coef=row[['Estimate']])
 }
 
+betaregr = function(formula, covs, methylation, weights, combine=c('liptak', 'z-score')){
+    library(betareg)
+    combine = match.arg(combine)
+    res = lapply(1:ncol(meth), function(icol){
+        betaregr.one(formula, covs, meth[,icol], weights[,icol])
+    })
+    pvals = unlist(lapply(1:length(res), function(i){ res[[i]]$p }))
+    sigma = abs(cor(methylation, method="spearman", use="pairwise.complete.obs"))
+    combine.fn = ifelse("liptak" == combine, stouffer_liptak.combine, zscore.combine)
+    combined.p = combine.fn(pvals, sigma)
+    coef = mean(unlist(lapply(1:length(res), function(i){ res[[i]]$coef })))
+    list(covariate=res[[1]]$covariate, p=combined.p, coef=coef)
+}
+
+betaregr.one = function(formula, covs, methylation, weights){
+    s = summary(betareg(formula, covs, weights=weights, link="logit"))$coefficients$mean
+    covariate = rownames(s)[2]
+    row = s[2,]
+    list(covariate=covariate, p=row[['Pr(>|t|)']], coef=row[['Estimate']])
+}
+
+
 #' Run lm on each column in a cluster and combine p-values with the 
 #' either stouffer-liptak or zscore method.
 #' 
@@ -437,10 +459,16 @@ clust.lm = function(formula, covs, meth,
                     weights=NULL,
                     gee.corstr=NULL, gee.idvar=NULL,
                     counts=FALSE,
-                    bumping=FALSE, combine=c(NA, "liptak", "z-score"), skat=FALSE){
+                    bumping=FALSE,
+                    betareg=FALSE,
+                    combine=c(NA, "liptak", "z-score"), skat=FALSE){
 
     formula = as.formula(formula)
     combine = match.arg(combine)
+
+    if(betareg){
+        return(betaregr(formula, covs, meth, weights, combine))
+    }
 
     if(ncol(meth) == 1 || is.vector(meth)){
         # just got one column, so we force it to use a linear model
@@ -451,6 +479,7 @@ clust.lm = function(formula, covs, meth,
         # TODO: handle counts.
         return(lmr(formula, covs, meth, weights))
     }
+
 
     # we assume there is one extra column for each CpG
     rownames(meth) = rownames(covs)
@@ -543,13 +572,8 @@ mclust.lm = function(formula, covs, meths, weights=NULL, gee.corstr=NULL, ..., m
 
     cluster_ids = 1:length(meths)
     results = mclapply(cluster_ids, function(cs){
-        if(!is.null(weights)){
-            res = try(clust.lm(formula, covs, meths[[cs]],
-                               weights=weights[[cs]], gee.corstr=gee.corstr, ...))
-        } else {
-            res = try(clust.lm(formula, covs, meths[[cs]],
-                               weights=weights[[cs]], gee.corstr=gee.corstr, ...))
-        }
+        res = try(clust.lm(formula, covs, meths[[cs]],
+                           weights=weights[[cs]], gee.corstr=gee.corstr, ...))
         if(!inherits(res, "try-error")){
             res$cluster_id = cs
             return(res)

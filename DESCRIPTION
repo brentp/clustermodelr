@@ -19,9 +19,6 @@ Imports:
     SKAT,
     multcomp,
     data.table
-Collate:
-    'clustermodelr.R'
-    'combine.R'
 Suggests:
     testthat,
     lme4,
@@ -31,3 +28,4 @@ Suggests:
     SKAT,
     multcomp,
     data.table
+    betareg
