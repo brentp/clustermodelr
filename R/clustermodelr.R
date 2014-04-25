@@ -89,7 +89,7 @@ betaregr = function(formula, covs, meth, wweights, combine=c('liptak', 'z-score'
 betaregr.one = function(formula, covs, methylation, wweights){
     covs$methylation = methylation
     covs$weights=wweights
-    s = summary(betareg(formula, covs, weights=covs$wweights, link="logit"))$coefficients$mean
+    s = summary(betareg(formula, covs, weights=covs$weights, link="logit"))$coefficients$mean
     covariate = rownames(s)[2]
     row = s[2,]
     list(covariate=covariate, p=row[['Pr(>|z|)']], coef=row[['Estimate']])
@@ -295,6 +295,7 @@ nb.mixed.count = function(formula, covs){
     #s = summary(glmer(formula, covs, family="poisson"))$coefficients
     # glmer.nb doesn't normalize the weights.
     #weights = covs$weights * length(covs$weights) / sum(covs$weights)
+    # todo: use offset variable (offset=covs$counts)
     s = summary(glmer.nb(formula, covs))$coefficients
     options(warn=w, error=e)
     covariate = paste0(rownames(s)[2], ".nb")
@@ -415,7 +416,7 @@ skatr = function(formula, covs, meth, r.corr=c(0.00, 0.015, 0.06, 0.15)){
 #'         and 'CpG' (and possibly 'weights').
 #'         Has nrow == ncol(meth) * nrow(meth).
 #' @export
-expand.covs = function(covs, meth, weights=NULL){
+expand.covs = function(covs, meth, weights=NULL, counts=FALSE){
     if(!"id" %in% colnames(covs)) covs$id = as.factor(1:nrow(covs))
     n_samples = nrow(covs)
     meth = as.matrix(meth)
@@ -429,6 +430,7 @@ expand.covs = function(covs, meth, weights=NULL){
         stopifnot(nrow(weights) == n_samples)
         dim(weights) = NULL
         covs$weights = as.numeric(weights)
+        if(counts) covs$counts = covs$weights
     }
 
     dim(meth) = NULL
@@ -508,7 +510,7 @@ clust.lm = function(formula, covs, meth,
     ###########################################
     # GEE and mixed models require long format.
     ###########################################
-    covs = expand.covs(covs, meth, weights) # TODO: make this send just the nrow, ncol
+    covs = expand.covs(covs, meth, weights, counts) # TODO: make this send just the nrow, ncol
 
     is.mixed.model = any(grepl("|", attr(terms(formula), 'term.labels'), fixed=TRUE))
     # mixed-model
