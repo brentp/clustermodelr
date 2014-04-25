@@ -69,25 +69,29 @@ lmr = function(formula, covs, methylation=NULL, weights=NULL){
     list(covariate=covariate, p=row[['Pr(>|t|)']], coef=row[['Estimate']])
 }
 
-betaregr = function(formula, covs, methylation, weights, combine=c('liptak', 'z-score')){
-    library(betareg)
+betaregr = function(formula, covs, meth, wweights, combine=c('liptak', 'z-score')){
+    suppressPackageStartupMessages(library('betareg', quietly=TRUE))
     combine = match.arg(combine)
+    meth[meth == 1] = 0.99
+    meth[meth == 0] = 0.01
+    if(ncol(meth) == 1){ return(betaregr.one(formula, covs, meth[,1], wweights[,1])) }
     res = lapply(1:ncol(meth), function(icol){
-        betaregr.one(formula, covs, meth[,icol], weights[,icol])
+        betaregr.one(formula, covs, meth[,icol], wweights[,icol])
     })
     pvals = unlist(lapply(1:length(res), function(i){ res[[i]]$p }))
-    sigma = abs(cor(methylation, method="spearman", use="pairwise.complete.obs"))
-    combine.fn = ifelse("liptak" == combine, stouffer_liptak.combine, zscore.combine)
-    combined.p = combine.fn(pvals, sigma)
+    sigma = abs(cor(meth, method="spearman", use="pairwise.complete.obs"))
+    combined.p = ifelse("liptak" == combine, stouffer_liptak.combine(pvals, sigma), zscore.combine(pvals, sigma))
     coef = mean(unlist(lapply(1:length(res), function(i){ res[[i]]$coef })))
     list(covariate=res[[1]]$covariate, p=combined.p, coef=coef)
 }
 
-betaregr.one = function(formula, covs, methylation, weights){
-    s = summary(betareg(formula, covs, weights=weights, link="logit"))$coefficients$mean
+betaregr.one = function(formula, covs, methylation, wweights){
+    covs$methylation = methylation
+    covs$weights=wweights
+    s = summary(betareg(formula, covs, weights=covs$wweights, link="logit"))$coefficients$mean
     covariate = rownames(s)[2]
     row = s[2,]
-    list(covariate=covariate, p=row[['Pr(>|t|)']], coef=row[['Estimate']])
+    list(covariate=covariate, p=row[['Pr(>|z|)']], coef=row[['Estimate']])
 }
 
 
