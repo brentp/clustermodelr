@@ -80,8 +80,9 @@ betaregr = function(formula, covs, meth, wweights, combine=c('liptak', 'z-score'
     })
     pvals = unlist(lapply(1:length(res), function(i){ res[[i]]$p }))
     sigma = abs(cor(meth, method="spearman", use="pairwise.complete.obs"))
-    combined.p = ifelse("liptak" == combine, stouffer_liptak.combine(pvals, sigma), zscore.combine(pvals, sigma))
-    coef = mean(unlist(lapply(1:length(res), function(i){ res[[i]]$coef })))
+    w = log2(1 + colMeans(wweights))
+    combined.p = zscore.combine(pvals, sigma, weights=w)
+    coef = weighted.mean(unlist(lapply(1:length(res), function(i){ res[[i]]$coef })), w)
     list(covariate=res[[1]]$covariate, p=combined.p, coef=coef)
 }
 
@@ -293,8 +294,8 @@ nb.mixed.count = function(formula, covs){
     suppressPackageStartupMessages(library('lme4', quietly=TRUE))
     #s = summary(glmer(formula, covs, family="poisson"))$coefficients
     # glmer.nb doesn't normalize the weights.
-    weights = covs$weights * length(covs$weights) / sum(covs$weights)
-    s = summary(glmer.nb(formula, covs, weights=weights))$coefficients
+    #weights = covs$weights * length(covs$weights) / sum(covs$weights)
+    s = summary(glmer.nb(formula, covs))$coefficients
     options(warn=w, error=e)
     covariate = paste0(rownames(s)[2], ".nb")
     row = s[2,]
