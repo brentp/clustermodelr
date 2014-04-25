@@ -18,7 +18,8 @@ Imports:
     limma,
     SKAT,
     multcomp,
-    data.table
+    data.table,
+    betareg
 Suggests:
     testthat,
     lme4,
@@ -27,5 +28,5 @@ Suggests:
     limma,
     SKAT,
     multcomp,
-    data.table
+    data.table,
     betareg
