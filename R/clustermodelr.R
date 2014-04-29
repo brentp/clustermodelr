@@ -78,11 +78,16 @@ betaregr = function(formula, covs, meth, wweights, combine=c('liptak', 'z-score'
     res = lapply(1:ncol(meth), function(icol){
         betaregr.one(formula, covs, meth[,icol], wweights[,icol])
     })
+    ilogit = function(x) 1 / (1 + exp(-x)) 
+
     pvals = unlist(lapply(1:length(res), function(i){ res[[i]]$p }))
     sigma = abs(cor(meth, method="spearman", use="pairwise.complete.obs"))
     w = log2(1 + colMeans(wweights))
     combined.p = zscore.combine(pvals, sigma, weights=w)
-    coef = weighted.mean(unlist(lapply(1:length(res), function(i){ res[[i]]$coef })), w)
+    #intercept = weighted.mean(unlist(lapply(1:length(res), function(i){ res[[i]]$intercept })))
+    coef = weighted.mean(unlist(lapply(1:length(res), function(i){ 
+        ilogit(res[[i]]$intercept + res[[i]]$coef) - ilogit(res[[i]]$intercept)
+    })))
     list(covariate=res[[1]]$covariate, p=combined.p, coef=coef)
 }
 
@@ -92,7 +97,7 @@ betaregr.one = function(formula, covs, methylation, wweights){
     s = summary(betareg(formula, covs, weights=covs$weights, link="logit"))$coefficients$mean
     covariate = rownames(s)[2]
     row = s[2,]
-    list(covariate=covariate, p=row[['Pr(>|z|)']], coef=row[['Estimate']])
+    list(covariate=covariate, p=row[['Pr(>|z|)']], coef=row[['Estimate']], intercept=s[["(Intercept)", "Estimate"]])
 }
 
 
