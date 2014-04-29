@@ -296,6 +296,7 @@ nb.mixed.count = function(formula, covs){
     # glmer.nb doesn't normalize the weights.
     #weights = covs$weights * length(covs$weights) / sum(covs$weights)
     # todo: use offset variable (offset=covs$counts)
+    #s = summary(glmer.nb(formula, covs, offset=covs$counts))$coefficients
     s = summary(glmer.nb(formula, covs))$coefficients
     options(warn=w, error=e)
     covariate = paste0(rownames(s)[2], ".nb")
