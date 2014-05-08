@@ -87,13 +87,13 @@ betaregr = function(formula, covs, meth, wweights, combine=c('liptak', 'z-score'
     #intercept = weighted.mean(unlist(lapply(1:length(res), function(i){ res[[i]]$intercept })))
     coef = weighted.mean(unlist(lapply(1:length(res), function(i){ 
         ilogit(res[[i]]$intercept + res[[i]]$coef) - ilogit(res[[i]]$intercept)
-    })))
+    })), w)
     list(covariate=res[[1]]$covariate, p=combined.p, coef=coef)
 }
 
 betaregr.one = function(formula, covs, methylation, wweights){
     covs$methylation = methylation
-    covs$weights=wweights
+    covs$counts = covs$weights=wweights
     s = summary(betareg(formula, covs, weights=covs$weights, link="logit"))$coefficients$mean
     covariate = rownames(s)[2]
     row = s[2,]
