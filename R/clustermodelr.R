@@ -346,7 +346,7 @@ geer = function(formula, covs, idvar="CpG", corstr="ex", counts=FALSE){
     covariate = rownames(s)[2]
     row = s[covariate,]
     if(counts) covariate=paste0(covariate, ".poisson")
-    return(list(covariate=covariate, p=row[['Pr(>|W|)']], coef=row[['Estimate']]))
+    return(list(covariate=covariate, p=max(row[['Pr(>|W|)']], 1e-13), coef=row[['Estimate']]))
 }
 
 #geer(read.csv('tt.csv'), methylation ~ disease, "id", "ex")
