@@ -86,7 +86,7 @@ betaregr = function(formula, covs, meth, wweights, combine=c('liptak', 'z-score'
     combined.p = zscore.combine(pvals, sigma, weights=w)
     #intercept = weighted.mean(unlist(lapply(1:length(res), function(i){ res[[i]]$intercept })))
     coef = weighted.mean(unlist(lapply(1:length(res), function(i){ 
-        ilogit(res[[i]]$intercept + res[[i]]$coef) - ilogit(res[[i]]$intercept)
+        ilogit(res[[i]]$intercept)
     })), w)
     list(covariate=res[[1]]$covariate, p=combined.p, coef=coef)
 }
