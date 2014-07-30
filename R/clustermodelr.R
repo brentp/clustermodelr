@@ -86,7 +86,7 @@ betaregr = function(formula, covs, meth, wweights, combine=c('liptak', 'z-score'
     combined.p = zscore.combine(pvals, sigma, weights=w)
     #intercept = weighted.mean(unlist(lapply(1:length(res), function(i){ res[[i]]$intercept })))
     coef = weighted.mean(unlist(lapply(1:length(res), function(i){ 
-        ilogit(res[[i]]$coef)
+        res[[i]]$coef
     })), w)
     list(covariate=res[[1]]$covariate, p=combined.p, coef=coef)
 }
@@ -485,12 +485,18 @@ clust.lm = function(formula, covs, meth,
 
     if(ncol(meth) == 1 || is.vector(meth)){
         # just got one column, so we force it to use a linear model
-        # remove random effects terms:
-        lhs = grep("|", attr(terms(formula), "term.labels"), fixed=TRUE, value=TRUE, invert=TRUE)
+        # remove random effects terms for CpG, id
+        #lhs = grep("|", attr(terms(formula), "term.labels"), fixed=TRUE, value=TRUE, invert=TRUE)
+        lhs = grep("\\|\\s*id|\\|\\s*CpG", attr(terms(formula), "term.labels"),  value=TRUE, invert=TRUE, perl=TRUE)
+        # add the parens back around the term.
+        lhs = gsub("(.+\\|.+)", "(\\1)", lhs, perl=TRUE)
         lhs = paste(lhs, collapse=" + ")
         formula = as.formula(paste("methylation", lhs, sep=" ~ "))
         # TODO: handle counts.
-        return(lmr(formula, covs, meth, weights))
+        # if removing |id and |CpG is all of the mixed-effect terms, then we can just run linear model.
+        if(!any(grep("|", attr(terms(formula), "term.labels"), fixed=TRUE))){
+            return(lmr(formula, covs, meth, weights))
+        }
     }
 
 
